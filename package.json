@@ -2,6 +2,7 @@
   "type": "module",
   "scripts": {
     "start": "node app.js",
+    "build":"npm run build",
     "start1":"nodemon app.js"
   },
   "dependencies": {
