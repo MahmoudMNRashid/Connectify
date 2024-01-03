@@ -10,10 +10,10 @@ import { port } from "../util/connect.js";
 import mongoose from "mongoose";
 
 const config = {
-  service: "gmail", // your email domain
+  service:process.env.CONFIG_EMAIL_SERVICE_SERVICE, // your email domain
   auth: {
-    user: "akai00917@gmail.com", // your email address
-    pass: "iswe sddw phjf eois", // your password
+    user:process.env.CONFIG_EMAIL_SERVICE_USER, // your email address
+    pass:process.env.CONFIG_EMAIL_SERVICE_PASS, // your password
   },
 };
 const transporter = nodemailer.createTransport(config);
@@ -55,7 +55,7 @@ export const signup = async (req, res, next) => {
 
     const confirmationLink = `http://localhost:${port}/auth/confirm/${confirmationToken}`;
     const mailOptions = {
-      from: "akai00917@gmail.com",
+      from:process.env.CONFIG_EMAIL_FROM,
       to: userDetails.email,
       subject: "Confirm Your Email",
       text: `Click the following link to confirm your email: ${confirmationLink}`,
@@ -109,8 +109,8 @@ export const signin = async (req, res, next) => {
 
     const token = jwt.sign(
       { email: user.email, userId: user._id.toString(), role: user.role },
-      privateKey,
-      { expiresIn: "2000h" }
+      process.env.PRIVATE_KEY,
+      { expiresIn: "20000h" }
     );
 
     res

@@ -17,7 +17,9 @@ cloudinary.config({
 
 connect();
 
-
+process.env.CLOUDINARY_CLOUD_NAME
+process.env.CLOUDINARY_API_KEY
+process.env.CLOUDINARY_API_SECRET
 app.post('/test', multer({ storage }).single('video'), (req, res) => {
   // Access the uploaded video file in req.file.buffer
   const videoBuffer = req.file.buffer;

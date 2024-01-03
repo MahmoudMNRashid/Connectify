@@ -3,9 +3,9 @@ import sharp from "sharp";
 import cloudinary from "cloudinary";
 
 cloudinary.config({
-  cloud_name: "dmddv8y8f",
-  api_key: "549329542696569",
-  api_secret: "-GdJcVolsFu3Nk3HBpLv5Ndyw0o",
+  cloud_name: process.env.CLOUDINARY_NAME,
+  api_key:process.env.CLOUDINARY_API_KEY,
+  api_secret:process.env.CLOUDINARY_API_SECRET,
 });
 export const storage = multer.memoryStorage();
 
