@@ -8,6 +8,8 @@ import User from "../models/user.js";
 import { privateKey, role } from "../util/auth.js";
 import { port } from "../util/connect.js";
 import mongoose from "mongoose";
+import dotenv from 'dotenv'
+dotenv.config()
 
 const config = {
   service: process.env.CONFIG_EMAIL_SERVICE_SERVICE, // your email domain
@@ -16,6 +18,7 @@ const config = {
     pass: process.env.CONFIG_EMAIL_SERVICE_PASS, // your password
   },
 };
+console.log(process.env.CONFIG_EMAIL_SERVICE_PASS)
 const transporter = nodemailer.createTransport(config);
 
 export const signup = async (req, res, next) => {
@@ -55,13 +58,14 @@ export const signup = async (req, res, next) => {
 
     const confirmationLink = `http://localhost:${port}/auth/confirm/${confirmationToken}`;
     const mailOptions = {
-      from: process.env.CONFIG_EMAIL_FROM,
+      from: process.env.CONFIG_EMAIL_SERVICE_USER,
       to: userDetails.email,
       subject: "Confirm Your Email",
       text: `Click the following link to confirm your email: ${confirmationLink}`,
     };
-    await transporter.sendMail(mailOptions);
 
+    await transporter.sendMail(mailOptions);
+  
     return res.status(200).json({
       message:
         "Registered successfully,Please check your email for a confirmation link. ",

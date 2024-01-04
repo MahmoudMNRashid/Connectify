@@ -875,7 +875,6 @@ export const sendRequestJoin = async (req, res, next) => {
           await user.save();
           res.status(200).json({ message: "Your request was sent" });
         }
-
       } else {
         //هون الانضمام مباشر بس اذا في دعوة محيها
         if (isUserSendToHimInvite) {
@@ -1085,8 +1084,6 @@ export const inviteUser = async (req, res, next) => {
 
     //here can send invite
 
-    
-
     const sentInviteFromGroup = {
       senderId: user._id,
       senderType: userType,
@@ -1102,8 +1099,6 @@ export const inviteUser = async (req, res, next) => {
         );
       }
     );
-
- 
 
     if (isInviteSentbeforeFromGroup) {
       const error = new Error(
@@ -1123,6 +1118,3 @@ export const inviteUser = async (req, res, next) => {
     next(error);
   }
 };
-
-
-
