@@ -5,11 +5,11 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 import User from "../models/user.js";
-import { privateKey, role } from "../util/auth.js";
-import { port } from "../util/connect.js";
+import { role } from "../util/auth.js";
+import { hostOnline } from "../util/connect.js";
 import mongoose from "mongoose";
-import dotenv from 'dotenv'
-dotenv.config()
+import dotenv from "dotenv";
+dotenv.config();
 
 const config = {
   service: process.env.CONFIG_EMAIL_SERVICE_SERVICE, // your email domain
@@ -18,7 +18,6 @@ const config = {
     pass: process.env.CONFIG_EMAIL_SERVICE_PASS, // your password
   },
 };
-console.log(process.env.CONFIG_EMAIL_SERVICE_PASS)
 const transporter = nodemailer.createTransport(config);
 
 export const signup = async (req, res, next) => {
@@ -53,22 +52,58 @@ export const signup = async (req, res, next) => {
       confirmationToken: confirmationToken,
     };
 
-    const newUser = new User(userDetails);
-    await newUser.save();
-
-    const confirmationLink = `http://localhost:${port}/auth/confirm/${confirmationToken}`;
+    const confirmationLink = `${hostOnline}/auth/confirm/${confirmationToken}`;
     const mailOptions = {
-      from: process.env.CONFIG_EMAIL_SERVICE_USER,
+      from: `"${process.env.CONFIG_EMAIL_FROM}" <${process.env.CONFIG_EMAIL_SERVICE_USER}>`,
       to: userDetails.email,
       subject: "Confirm Your Email",
       text: `Click the following link to confirm your email: ${confirmationLink}`,
+      html: `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Email Confirmation</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              background-color: #f4f4f4;
+              text-align: center;
+              padding: 20px;
+            }
+    
+            p {
+              color: #555;
+            }
+    
+            a {
+              color: #3498db;
+              text-decoration: none;
+            }
+    
+            a:hover {
+              text-decoration: underline;
+            }
+          </style>
+        </head>
+        <body>
+          <p>Click the following link to confirm your email:</p>
+          <a href="${confirmationLink}">${confirmationLink}</a>
+        </body>
+        </html>
+      `,
     };
 
     await transporter.sendMail(mailOptions);
-  
+
+    const newUser = new User(userDetails);
+    await newUser.save();
+
     return res.status(200).json({
       message:
-        "Registered successfully,Please check your email for a confirmation link. ",
+        "Registered successfully,Please check your email for a confirmation link.  i will put link here for test and speedup ",
+      link: confirmationLink,
     });
   } catch (error) {
     if (!error.statusCode) {
@@ -141,7 +176,36 @@ export const confirm = async (req, res, next) => {
     user.confirmationToken = undefined;
     user.confirm = true;
     await user.save();
-    return res.status(200).send("Email confirmed successfully!");
+    return res.status(200).send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Email Confirmation</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          background-color: #f4f4f4;
+          text-align: center;
+          padding: 20px;
+        }
+  
+        h1 {
+          color: #3498db;
+        }
+  
+        p {
+          color: #555;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>Email confirmed successfully!</h1>
+      <p>Your email has been successfully confirmed. Thank you for your registration.</p>
+    </body>
+    </html>
+  `);
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
@@ -171,7 +235,7 @@ export const resetPassword = async (req, res, next) => {
 
     const resetPasswordToken = crypto.randomBytes(22).toString("hex");
     const resetPasswordTokenExpire = Date.now() + 3600000;
-    const confirmationLink = `http://localhost:${port}/auth/reset/${resetPasswordToken}?userId=${user._id.toString()}`;
+    const confirmationLink = `${hostOnline}/auth/reset/${resetPasswordToken}?userId=${user._id.toString()}`;
     user.resetPasswordToken = resetPasswordToken;
     user.resetPasswordTokenExpire = resetPasswordTokenExpire;
     await user.save();

@@ -2,7 +2,7 @@ import { deleteAssets, uploadAssets } from "../util/file.js";
 import User from "../models/user.js";
 import Post from "../models/post.js";
 import mongoose from "mongoose";
-import { host } from "../util/connect.js";
+import { hostOnline } from "../util/connect.js";
 import { fileFilterPhotosAndVideos } from "../util/file.js";
 
 export const createPostFromProfile = async (req, res, next) => {
@@ -43,7 +43,7 @@ export const createPostFromProfile = async (req, res, next) => {
     user.posts.push(result._id);
     await user.save();
 
-    result.link = host + "/profile" + "/" + result._id.toString() ,
+    result.link = hostOnline + "/profile" + "/" + result._id.toString() ,
       await result.save();
     res.status(201).json({ message: "Post was created", post: result });
   } catch (error) {

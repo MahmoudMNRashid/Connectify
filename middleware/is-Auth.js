@@ -17,7 +17,7 @@ export const isAuth = (req, res, next) => {
 
   let decodedtoken;
   try {
-    decodedtoken = jwt.verify(token, privateKey);
+    decodedtoken = jwt.verify(token, process.env.PRIVATE_KEY);
     if (!decodedtoken) {
       const error = new Error("not authenticated");
       error.statusCode = 401;

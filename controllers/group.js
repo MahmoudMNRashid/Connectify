@@ -1,7 +1,7 @@
 import { validationResult } from "express-validator";
 import User from "../models/user.js";
 import Group from "../models/group.js";
-import { host } from "../util/connect.js";
+import { hostOnline } from "../util/connect.js";
 
 import {
   deleteAssets,
@@ -31,7 +31,7 @@ export const createGroup = async (req, res, next) => {
 
     const group = new Group({ name, privacy, visibility, moderator: user._id });
     const result = await group.save();
-    result.link = host + "/group" + "/" + result._id.toString();
+    result.link = hostOnline + "/group" + "/" + result._id.toString();
     await result.save();
     user.groups.push({ groupId: result._id, role });
     await user.save();
@@ -526,7 +526,7 @@ export const createPost = async (req, res, next) => {
 
       try {
         const result = await post.save();
-        result.link = host + "/group" + "/" + result._id.toString();
+        result.link = hostOnline + "/group" + "/" + result._id.toString();
         group.requestPosts.push({
           postId: result._id,
           userId: new mongoose.Types.ObjectId(req.userId),
@@ -547,7 +547,7 @@ export const createPost = async (req, res, next) => {
       try {
         const result = await post.save();
         result.link =
-          host + "/group" + "/" + groupId + "/" + result._id.toString();
+          hostOnline + "/group" + "/" + groupId + "/" + result._id.toString();
 
         group.posts.push({
           postId: result._id,
