@@ -7,6 +7,8 @@ cloudinary.config({
   api_key:process.env.CLOUDINARY_API_KEY,
   api_secret:process.env.CLOUDINARY_API_SECRET,
 });
+
+
 export const storage = multer.memoryStorage();
 
 export const uploadAssets = async (assets, folder) => {

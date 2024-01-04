@@ -10,10 +10,10 @@ import { port } from "../util/connect.js";
 import mongoose from "mongoose";
 
 const config = {
-  service:process.env.CONFIG_EMAIL_SERVICE_SERVICE, // your email domain
+  service: process.env.CONFIG_EMAIL_SERVICE_SERVICE, // your email domain
   auth: {
-    user:process.env.CONFIG_EMAIL_SERVICE_USER, // your email address
-    pass:process.env.CONFIG_EMAIL_SERVICE_PASS, // your password
+    user: process.env.CONFIG_EMAIL_SERVICE_USER, // your email address
+    pass: process.env.CONFIG_EMAIL_SERVICE_PASS, // your password
   },
 };
 const transporter = nodemailer.createTransport(config);
@@ -28,7 +28,7 @@ export const signup = async (req, res, next) => {
       error.data = errors.array();
       throw error;
     }
-      
+
     const user = await User.findOne({ email: req.body.email });
     if (user) {
       const error = new Error("User already exists");
@@ -55,7 +55,7 @@ export const signup = async (req, res, next) => {
 
     const confirmationLink = `http://localhost:${port}/auth/confirm/${confirmationToken}`;
     const mailOptions = {
-      from:process.env.CONFIG_EMAIL_FROM,
+      from: process.env.CONFIG_EMAIL_FROM,
       to: userDetails.email,
       subject: "Confirm Your Email",
       text: `Click the following link to confirm your email: ${confirmationLink}`,

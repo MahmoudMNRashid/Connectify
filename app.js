@@ -1,7 +1,12 @@
 import { connect, app } from "./util/connect.js";
 import bodyParser from "body-parser";
 import multer from "multer";
+import dotenv from 'dotenv'
+dotenv.config()
 
+console.log( process.env.CONFIG_EMAIL_FROM)
+console.log(process.env.CONFIG_EMAIL_SERVICE_USER)
+console.log(process.env.CONFIG_EMAIL_SERVICE_PASS)
 import authRoute from "./routes/auth.js";
 import postRoute from "./routes/post.js";
 import profileRoute from "./routes/profile.js";
@@ -17,9 +22,7 @@ cloudinary.config({
 
 connect();
 
-process.env.CLOUDINARY_CLOUD_NAME
-process.env.CLOUDINARY_API_KEY
-process.env.CLOUDINARY_API_SECRET
+
 app.post('/test', multer({ storage }).single('video'), (req, res) => {
   // Access the uploaded video file in req.file.buffer
   const videoBuffer = req.file.buffer;
