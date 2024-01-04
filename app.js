@@ -15,7 +15,7 @@ import { storage } from "./util/file.js";
 connect();
 
 
-app.post('/test', (req, res) => {
+app.get('/test', (req, res) => {
 res.status(200).json({message:'Hello World'})
 });
 
