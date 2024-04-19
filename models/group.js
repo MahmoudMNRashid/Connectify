@@ -1,51 +1,97 @@
 import mongoose from "mongoose";
+import {
+  WhoCanPostorApproveMemberRequest,
+  privacy,
+  visibility,
+} from "../util/configGroup.js";
 const Schema = mongoose.Schema;
 
 const groupSchema = new Schema(
   {
     name: { type: String, required: true },
-    privacy: { type: String, required: true, enum: ["public", "private"] },
-    visibility: { type: String, required: true, enum: ["visible", "hidden"] }, //visible //hidden
-    moderator: { type: Schema.Types.ObjectId, ref: "User", required: true },
     description: String,
-    coverPhoto: Object,
-    members: [{ type: Schema.Types.ObjectId, ref: "User" }],
-    admins: [{ type: Schema.Types.ObjectId, ref: "User" }],
-    posts: [
-      {
-        postId: { type: Schema.Types.ObjectId, ref: "Post" },
-        userId: { type: Schema.Types.ObjectId, ref: "User" },
-        from: String,
-      },
-    ],
-    requestPosts: [
-      {
-        postId: { type: Schema.Types.ObjectId, ref: "Post" },
-        userId: { type: Schema.Types.ObjectId, ref: "User" },
-      },
-    ],
+    cover: Object,
+    privacy: { type: String, required: true, enum: [privacy.PUBLIC,privacy.PRIVATE] },
+    visibility: {
+      type: String,
+      required: true,
+      enum: [visibility.HIDDEN, visibility.VISIBLE],
+    }, //visible //hidden
     whoCanPost: {
       type: String,
-      enum: ["anyone", "adminsAndModerator"],
-      default: "adminsAndModerator",
+      enum: [
+        WhoCanPostorApproveMemberRequest.ANY_ONE_IN_GROUP,
+        WhoCanPostorApproveMemberRequest.ADMINS_AND_MODERATOR,
+      ],
+      default: WhoCanPostorApproveMemberRequest.ADMINS_AND_MODERATOR,
     },
     whoCanApproveMemberRequest: {
       type: String,
-      enum: ["anyone", "adminsAndModerator"],
-      default: "adminsAndModerator",
+      enum: [
+        WhoCanPostorApproveMemberRequest.ANY_ONE_IN_GROUP,
+        WhoCanPostorApproveMemberRequest.ADMINS_AND_MODERATOR,
+      ],
+      default: WhoCanPostorApproveMemberRequest.ADMINS_AND_MODERATOR,
     },
     immediatePost: { type: Boolean, default: true },
-    link: String,
-    joiningRequests: [{ type: Schema.Types.ObjectId, ref: "User" }],
-    sentInvites: [
+
+    moderator: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    members: [
       {
-        senderId: { type: Schema.Types.ObjectId, ref: "User" },
-        senderType: { type: String, enum: ["member", "admin", "moderator"] },
-        addressee: { type: Schema.Types.ObjectId, ref: "User" },
+        _id: false,
+        userId: { type: Schema.Types.ObjectId, ref: "User" },
+        joiningDate: Date,
       },
     ],
+    admins: [
+      {
+        _id: false,
+        userId: { type: Schema.Types.ObjectId, ref: "User" },
+        joiningDate: Date,
+      },
+    ],
+    posts: [{ type: Schema.Types.ObjectId, ref: "Post" }],
+    requestPosts: [
+      {
+        _id: false,
+        postId: { type: Schema.Types.ObjectId, ref: "Post" },
+        ownerId: { type: Schema.Types.ObjectId, ref: "User" },
+      },
+    ],
+
+    joiningRequests: [
+      {
+        userId: { type: Schema.Types.ObjectId, ref: "User" },
+        requestDate: Date,
+        _id: false,
+      },
+    ],
+
+    reports: [
+      {
+        from: { type: Schema.Types.ObjectId, ref: "User" },
+        description: { type: String, required: true },
+        postId: { type: Schema.Types.ObjectId, ref: "Post" },
+        idOfOwnerPost: { type: Schema.Types.ObjectId, ref: "User" }, //for later when get
+        reportDate: Date,
+      },
+    ],
+    reportsFromAdmin: [
+      //this come just for moderator
+      {
+        from: { type: Schema.Types.ObjectId, ref: "User" },
+        description: { type: String, Required: true },
+        postId: { type: Schema.Types.ObjectId, ref: "Post" },
+        idOfOwnerPost: { type: Schema.Types.ObjectId, ref: "User" },
+        reportDate: Date,
+      },
+    ],
+    membersBlocked: [{ type: Schema.Types.ObjectId, ref: "User" }],
   },
 
   { timestamps: true }
 );
-export default mongoose.model("group", groupSchema);
+
+groupSchema.index({ name: "text", description: "text" });
+
+export default mongoose.model("Group", groupSchema);

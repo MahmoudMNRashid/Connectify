@@ -1,7 +1,6 @@
 import { validationResult } from "express-validator";
 import User from "../models/user.js";
 import Group from "../models/group.js";
-import { hostOnline } from "../util/connect.js";
 
 import {
   deleteAssets,
@@ -11,158 +10,182 @@ import {
 import mongoose from "mongoose";
 import Post from "../models/post.js";
 
+import { createError } from "../util/helpers.js";
+
+import {
+  admins,
+  joiningRequest,
+  mainInformationForAdminsAndModerator,
+  mainInformationForMembers,
+  mainInformationForNotMembers,
+  members,
+  posts,
+  reports,
+  reportsFromAdmin,
+  requestPosts,
+  yourRequestPost,
+} from "../util/queries/group.js";
+import { information } from "../util/queries/pagination.js";
+import {
+  WhoCanPostorApproveMemberRequest,
+  privacy as privacyGroup,
+} from "../util/configGroup.js";
+import { groupRoles } from "../util/roles.js";
+
 export const createGroup = async (req, res, next) => {
   const errors = validationResult(req);
-  const userId = req.userId;
+  const yourId = req.userId;
   const name = req.body.name;
   const privacy = req.body.privacy;
   const visibility = req.body.visibility;
-  console.log(visibility);
-  const role = "moderator";
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    const user = await User.findById(userId, { groups: 1 });
-
+    //Check if Validation Failed
     if (!errors.isEmpty()) {
-      const error = new Error("Validation  failed");
-      error.statusCode = 422;
-      error.data = errors.array();
-      throw error;
+      createError(422, "Validation failed", errors.array());
     }
+    //Create new Schema
+    const group = new Group({ name, privacy, visibility, moderator: yourId });
+    //save in Group Collection
+    const result = await group.save({ session });
+    //save in User Collection
+    await User.updateOne(
+      { _id: yourId },
+      {
+        $push: { groups: result._id },
+      },
+      { session }
+    );
 
-    const group = new Group({ name, privacy, visibility, moderator: user._id });
-    const result = await group.save();
-    result.link = hostOnline + "/group" + "/" + result._id.toString();
-    await result.save();
-    user.groups.push({ groupId: result._id, role });
-    await user.save();
+    await session.commitTransaction();
+    session.endSession();
     res
       .status(201)
-      .json({ message: "Your group was created", groupId: result._id });
+      .json({ message: "Your group has been created", groupId: result._id });
   } catch (error) {
-    if (!error.statusCode) {
-      error.statusCode = 500;
-    }
+    await session.abortTransaction();
+    session.endSession();
+
     next(error);
   }
 };
 
 export const addCoverPhoto = async (req, res, next) => {
-  const userId = req.userId;
-  const coverPhoto = req.files;
+  const cover = req.files;
   const groupId = req.body.groupId;
 
   try {
-    const group = await Group.findById(groupId, {
-      coverPhoto: 1,
-      moderator: 1,
-      admins: 1,
-    });
-
-    if (group.coverPhoto) {
-      const error = new Error("There are photo already");
-      error.statusCode = 400;
-      throw error;
+    //check if uploaded more than one photo
+    if (cover.length !== 1) {
+      createError(422, "Please upload one photo");
     }
+    // Filter photo (for example if he upload pdf file)
+    fileFilterPhotosAndVideos(cover);
 
-    if (coverPhoto.length !== 1) {
-      const error = new Error("Please upload one photo ");
-      error.statusCode = 422;
-      throw error;
-    }
-    const allowedImageTypes = ["image/png", "image/jpg", "image/jpeg"];
-    if (!allowedImageTypes.includes(coverPhoto[0].mimetype)) {
-      const error = new Error("Photo must be png,jpj or jpeg ");
-      error.statusCode = 422;
-      throw error;
-    }
-
-    const publicidAndLink = await uploadAssets(
-      coverPhoto,
-      1,
-      "Assets from group"
+    //Get group with cover
+    const group = await Group.findOne(
+      { _id: groupId, cover: { $exists: false } },
+      { cover: 1 }
     );
-    group.coverPhoto = publicidAndLink[0];
+
+    //Check if you already added one
+    !group ? createError("400", "There is a previous cover") : null;
+
+    //Upload cover to cloudinary
+    var publicidAndLink = await uploadAssets(
+      cover,
+      `Assets_from_group/${groupId}/cover`
+    );
+
+    //save change in db
+    group.cover = publicidAndLink[0];
     await group.save();
+
     res
       .status(200)
-      .json({ message: "Cover photo was added ", link: publicidAndLink });
+      .json({ message: "Cover has been updated", link: publicidAndLink[0] });
   } catch (error) {
+    if (publicidAndLink) {
+      await deleteAssets(publicidAndLink);
+    }
     next(error);
   }
 };
 export const updateCoverPhoto = async (req, res, next) => {
-  const userId = req.userId;
-  const coverPhoto = req.files;
+  const cover = req.files;
   const groupId = req.body.groupId;
 
   try {
-    const group = await Group.findById(groupId, {
-      coverPhoto: 1,
-      moderator: 1,
-      admins: 1,
-    });
-
-    if (!group.coverPhoto) {
-      const error = new Error("Please add photo before ");
-      error.statusCode = 400;
-      throw error;
+    //check if uploaded more than one photo
+    if (cover.length !== 1) {
+      createError(422, "Please upload one photo");
     }
-
-    if (coverPhoto.length !== 1) {
-      const error = new Error("Please upload one photo ");
-      error.statusCode = 422;
-      throw error;
-    }
-    const allowedImageTypes = ["image/png", "image/jpg", "image/jpeg"];
-    if (!allowedImageTypes.includes(coverPhoto[0].mimetype)) {
-      const error = new Error("Photo must be png,jpj or jpeg ");
-      error.statusCode = 422;
-      throw error;
-    }
-    console.log([group.coverPhoto]);
-    await deleteAssets([group.coverPhoto]);
-    const publicidAndLink = await uploadAssets(
-      coverPhoto,
-      1,
-      "Assets from group"
+    // Filter photo (for example if he upload pdf file)
+    fileFilterPhotosAndVideos(cover);
+    //Get group with old cover
+    const group = await Group.findOne(
+      { _id: groupId, cover: { $exists: true } },
+      { cover: 1 }
     );
-    group.coverPhoto = publicidAndLink[0];
+    //Check if you not added one
+    !group ? createError("400", "There is no previous cover") : null;
+
+    //Upload cover to cloudinary
+    var publicidAndLink = await uploadAssets(
+      cover,
+      `Assets from group/${groupId}/cover`
+    );
+
+    //extract old cover
+    const oldCover = group.cover;
+    //Update db and temp for ensure we save changes in db and now can delete cover from cloudinary
+    group.cover = publicidAndLink[0];
+    var temp = 0;
     await group.save();
+    temp = 1;
+
     res
       .status(200)
-      .json({ message: "Cover photo was updated ", link: publicidAndLink });
+      .json({ message: "Cover has been updated ", link: publicidAndLink[0] });
+
+    temp ? await deleteAssets([oldCover]) : null;
   } catch (error) {
+    if (temp === 0) {
+      if (publicidAndLink) {
+        await deleteAssets(publicidAndLink);
+      }
+    }
     next(error);
   }
 };
 
 export const addDescription = async (req, res, next) => {
   const errors = validationResult(req);
-  const userId = req.userId;
   const description = req.body.description;
   const groupId = req.body.groupId;
 
   try {
-    if (!errors.isEmpty()) {
-      const error = new Error("Description should not be empty");
-      error.statusCode = 422;
-      error.data = errors.array();
-      throw error;
-    }
-    const group = await Group.findById(groupId, {
-      description: 1,
-      moderator: 1,
-      admins: 1,
-    });
+    //check validation
+    !errors.isEmpty()
+      ? createError(422, "Description should not be empty")
+      : null;
 
-    if (group.description) {
-      const error = new Error("There are description already");
-      error.statusCode = 400;
-      throw error;
-    }
-
-    group.description = description;
-    await group.save();
+    const group = await Page.findOneAndUpdate(
+      {
+        _id: groupId,
+        description: { $exists: false },
+      },
+      {
+        description: description,
+      },
+      {
+        new: true, //
+        select: "_id", //
+      }
+    );
+    !group ? createError(404, "There is previous description") : null;
+    //send response
     res.status(200).json({ message: "Description was added " });
   } catch (error) {
     next(error);
@@ -170,32 +193,31 @@ export const addDescription = async (req, res, next) => {
 };
 export const updateDescription = async (req, res, next) => {
   const errors = validationResult(req);
-  const userId = req.userId;
   const description = req.body.description;
   const groupId = req.body.groupId;
 
   try {
-    if (!errors.isEmpty()) {
-      const error = new Error("Description should not be empty");
-      error.statusCode = 422;
-      error.data = errors.array();
-      throw error;
-    }
-    const group = await Group.findById(groupId, {
-      description: 1,
-      moderator: 1,
-      admins: 1,
-    });
+    //Check validation
+    !errors.isEmpty()
+      ? createError(422, "Description should not be empty")
+      : null;
+    const group = await Page.findOneAndUpdate(
+      {
+        _id: groupId,
+        description: { $exists: true },
+      },
+      {
+        description: description,
+      },
+      {
+        new: true, //
+        select: "_id", //
+      }
+    );
+    !group ? createError(404, "There is previous description") : null;
 
-    if (!group.description) {
-      const error = new Error("No description found");
-      error.statusCode = 400;
-      throw error;
-    }
-
-    group.description = description;
-    await group.save();
-    res.status(200).json({ message: "Description was updated " });
+    //send response
+    res.status(200).json({ message: "Description has been updated " });
   } catch (error) {
     next(error);
   }
@@ -203,26 +225,23 @@ export const updateDescription = async (req, res, next) => {
 
 export const updateName = async (req, res, next) => {
   const errors = validationResult(req);
-  const userId = req.userId;
   const name = req.body.name;
   const groupId = req.body.groupId;
 
   try {
-    if (!errors.isEmpty()) {
-      const error = new Error("name should not be empty");
-      error.statusCode = 422;
-      error.data = errors.array();
-      throw error;
-    }
-    const group = await Group.findById(groupId, {
-      name: 1,
-      moderator: 1,
-      admins: 1,
-    });
+    !errors.isEmpty()
+      ? createError(422, "Validation failed", errors.array())
+      : null;
 
-    group.name = name;
-    await group.save();
-    res.status(200).json({ message: "name was updated " });
+    await Group.updateOne(
+      { _id: groupId },
+      {
+        name: name,
+      }
+    );
+
+    //send response
+    res.status(200).json({ message: "Name has been updated " });
   } catch (error) {
     next(error);
   }
@@ -230,51 +249,36 @@ export const updateName = async (req, res, next) => {
 
 export const changeVisibility = async (req, res, next) => {
   const errors = validationResult(req);
-  const userId = req.userId;
   const groupId = req.body.groupId;
   const visibility = req.body.visibility;
 
   try {
-    if (!errors.isEmpty()) {
-      const error = new Error("Invalid Validation in Visibility");
-      error.statusCode = 422;
-      error.data = errors.array();
-      throw error;
-    }
-    const group = await Group.findById(groupId, {
-      name: 1,
-      moderator: 1,
-      admins: 1,
-      privacy: 1,
-      visibility: 1,
-    });
+    //check validation
+    !errors.isEmpty() ? createError(422, "Invalid Validation") : null;
+    //get group with visibility
+    const group = await Group.findOne(
+      {
+        _id: groupId,
+        visibility: { $ne: visibility },
+      },
+      { visibility: 1, privacy: 1 }
+    );
 
-    if (visibility === "hidden" && group.privacy === "public") {
-      const error = new Error(
-        "You Can not change visibility to hidden because the privacy is public"
-      );
-      error.statusCode = 403;
-      throw error;
-    }
+    //check if visi equal to visi which send
+    !group ? createError(400, `Already ${visibility}`) : null;
 
-    if (visibility === "hidden" && group.visibility === "hidden") {
-      const error = new Error(
-        "You Can not change visibility to hidden because already is hidden"
-      );
-      error.statusCode = 403;
-      throw error;
-    }
-    if (visibility === "visible" && group.visibility === "visible") {
-      const error = new Error(
-        "You Can not change visibility to visible because already is visible"
-      );
-      error.statusCode = 403;
-      throw error;
-    }
+    //check if privacy is public and visi which send is hidden because forbidden
+    visibility === visibility.HIDDEN && group.privacy === privacyGroup.PUBLIC
+      ? createError(
+          403,
+          "You can not change visibility to hidden because the privacy is public"
+        )
+      : null;
 
+    //save changes in db
     group.visibility = visibility;
     await group.save();
-
+    //send response
     res
       .status(200)
       .json({ message: `Your visibility changed to ${visibility}` });
@@ -285,51 +289,41 @@ export const changeVisibility = async (req, res, next) => {
 
 export const changePrivacy = async (req, res, next) => {
   const errors = validationResult(req);
-  const userId = req.userId;
   const groupId = req.body.groupId;
   const privacy = req.body.privacy;
 
   try {
-    if (!errors.isEmpty()) {
-      const error = new Error("Invalid Validation in Visibility");
-      error.statusCode = 422;
-      error.data = errors.array();
-      throw error;
-    }
-    const group = await Group.findById(groupId, {
-      name: 1,
-      moderator: 1,
-      admins: 1,
-      privacy: 1,
-      visibility: 1,
-    });
+    //check validation
+    !errors.isEmpty() ? createError(422, "Invalid Validation") : null;
 
-    if (privacy === "public" && group.visibility === "hidden") {
-      const error = new Error(
-        "You Can not change privacy to public because the visibility is hidden"
-      );
-      error.statusCode = 403;
-      throw error;
-    }
+    //get group with privacy
+    const group = await Group.findOne(
+      {
+        _id: groupId,
+        privacy: { $ne: privacy },
+      },
+      { visibility: 1, privacy: 1 }
+    );
 
-    if (privacy === "private" && group.privacy === "private") {
-      const error = new Error(
-        "You Can not change privacy to private because already is private"
+    //check if privacy equal to privacy which send
+    !group ? createError(400, `Already ${privacy}`) : null;
+
+    //check if privacy is public and visi in db is hidden  because forbidden
+
+    if (
+      privacy === privacyGroup.PUBLIC &&
+      group.visibility === visibility.HIDDEN
+    ) {
+      createError(
+        403,
+        "You can not change privacy to public because the visibility is hidden"
       );
-      error.statusCode = 403;
-      throw error;
-    }
-    if (privacy === "public" && group.privacy === "public") {
-      const error = new Error(
-        "You Can not change privacy to public because already is public"
-      );
-      error.statusCode = 403;
-      throw error;
     }
 
+    //save changes in db
     group.privacy = privacy;
     await group.save();
-
+    //send response
     res.status(200).json({ message: `Your privacy changed to ${privacy}` });
   } catch (error) {
     next(error);
@@ -338,90 +332,97 @@ export const changePrivacy = async (req, res, next) => {
 
 export const changeWhoCanPost = async (req, res, next) => {
   const errors = validationResult(req);
-  const userId = req.userId;
   const groupId = req.body.groupId;
   const whoCanPost = req.body.whoCanPost;
 
   try {
-    if (!errors.isEmpty()) {
-      const error = new Error("Invalid Validation in who can post");
-      error.statusCode = 422;
-      error.data = errors.array();
-      throw error;
-    }
-    const group = await Group.findById(groupId, {
-      whoCanPost: 1,
-    });
+    //check validation
+    !errors.isEmpty() ? createError(422, "Invalid Validation") : null;
 
-    if (whoCanPost === "anyone" && group.whoCanPost === "anyone") {
-      const error = new Error(
-        "You Can not change whoCanPost to anyone because already is anyone"
-      );
-      error.statusCode = 403;
-      throw error;
-    }
-    if (
-      whoCanPost === "adminsAndModerator" &&
-      group.whoCanPost === "adminsAndModerator"
-    ) {
-      const error = new Error(
-        "You Can not change whoCanPost to adminsAndModerator because already is adminsAndModerator"
-      );
-      error.statusCode = 403;
-      throw error;
-    }
+    const group = await Group.findOneAndUpdate(
+      {
+        _id: groupId,
+        whoCanPost: { $ne: whoCanPost },
+      },
+      { whoCanPost: whoCanPost },
+      {
+        new: true,
+        select: "_id",
+      }
+    );
 
-    group.whoCanPost = whoCanPost;
-    await group.save();
+    !group ? createError(400, `Already ${whoCanPost}`) : null;
 
-    res.status(200).json({ message: ` ${whoCanPost} can  post` });
+    //send response
+    res.status(200).json({ message: `${whoCanPost} can post` });
   } catch (error) {
     next(error);
   }
 };
+
+export const changeImmediatePost = async (req, res, next) => {
+  const groupId = req.body.groupId;
+  const immediatePost = +req.body.immediatePost;
+
+  try {
+    //check validation
+    immediatePost !== 0 && immediatePost !== 1
+      ? createError(422, "Immediate post should be 0 or 1")
+      : null;
+
+    const group = await Group.findOneAndUpdate(
+      {
+        _id: groupId,
+        immediatePost: { $ne: immediatePost },
+      },
+      { immediatePost: immediatePost },
+      {
+        new: true, //
+        select: "_id", //
+      }
+    );
+
+    //check if immediatePost equal to immediatePost which send
+    !group ? createError(400, `Already ${immediatePost}`) : null;
+
+    //send response
+    res.status(200).json({
+      message: ` ${
+        immediatePost === 1
+          ? "Immediate Post is active"
+          : "Immediate Post is not active"
+      } `,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const changeWhoCanApproveMemberRequest = async (req, res, next) => {
   const errors = validationResult(req);
-  const userId = req.userId;
   const groupId = req.body.groupId;
   const whoCanApproveMemberRequest = req.body.whoCanApproveMemberRequest;
 
   try {
-    if (!errors.isEmpty()) {
-      const error = new Error(
-        "Invalid Validation in who can approve member request"
-      );
-      error.statusCode = 422;
-      error.data = errors.array();
-      throw error;
-    }
-    const group = await Group.findById(groupId, {
-      whoCanApproveMemberRequest: 1,
-    });
+    //check validation
+    !errors.isEmpty() ? createError(422, "Invalid Validation") : null;
+    //get group with whoCanApproveMemberRequest
+    const group = await Group.findOneAndUpdate(
+      {
+        _id: groupId,
+        whoCanApproveMemberRequest: { $ne: whoCanApproveMemberRequest },
+      },
+      { whoCanApproveMemberRequest: whoCanApproveMemberRequest },
+      {
+        new: true,
+        select: "_id",
+      }
+    );
 
-    if (
-      whoCanApproveMemberRequest === "anyone" &&
-      group.whoCanApproveMemberRequest === "anyone"
-    ) {
-      const error = new Error(
-        "You Can not change whoCanPost to anyone because already is anyone"
-      );
-      error.statusCode = 403;
-      throw error;
-    }
-    if (
-      whoCanApproveMemberRequest === "adminsAndModerator" &&
-      group.whoCanApproveMemberRequest === "adminsAndModerator"
-    ) {
-      const error = new Error(
-        "You Can not change whoCanPost to adminsAndModerator because already is adminsAndModerator"
-      );
-      error.statusCode = 403;
-      throw error;
-    }
+    //check if whoCanApproveMemberRequest equal to whoCanApproveMemberRequest which send
+    !group ? createError(400, `Already ${whoCanApproveMemberRequest}`) : null;
 
-    group.whoCanApproveMemberRequest = whoCanApproveMemberRequest;
-    await group.save();
-
+    //send response
     res.status(200).json({
       message: ` ${whoCanApproveMemberRequest} can  approve member request`,
     });
@@ -431,689 +432,1420 @@ export const changeWhoCanApproveMemberRequest = async (req, res, next) => {
 };
 
 export const addAdmin = async (req, res, next) => {
-  const userId = req.body.userId;
   const groupId = req.body.groupId;
   const memberId = req.body.memberId;
 
   try {
-    //is member in user colletion
-    const member = await User.findById(memberId, { firstName: 1, lastName: 1 });
-    if (!member) {
-      const error = new Error("No user with this id ");
-      error.statusCode = 404;
-      throw error;
-    }
-    //is member in members group and not in admins group
+    //no need to check if member found in users collection
+    //because when delete user permnantly will leave all group
 
-    const group = await Group.findById(groupId, { members: 1, admins: 1 });
-    const isMemberInGroupMember = group.members.includes(
-      new mongoose.Types.ObjectId(memberId)
-    );
-    if (!isMemberInGroupMember) {
-      const error = new Error("this id not in group member");
-      error.statusCode = 404;
-      throw error;
-    }
-    const isMemberInGroupAdmins = group.admins.includes(
-      new mongoose.Types.ObjectId(memberId)
-    );
-    if (isMemberInGroupAdmins) {
-      const error = new Error("This id already admin");
-      error.statusCode = 422;
-      throw error;
-    }
+    // // Check if member exists
+    // const member = await User.findById(memberId, {
+    //   firstName: 1,
+    //   lastName: 1,
+    //   groups: 1,
+    // });
 
-    //here edit array members and
-    group.members = group.members.filter(
-      (id) => id._id.toString() !== memberId
+    // if (!member) {
+    //   createError(404, "There are no user with this ID");
+    // }
+
+    // should be in members  to upgrade to admin
+    const group = await Group.findOne(
+      {
+        _id: groupId,
+        members: { $elemMatch: { userId: memberId } },
+      },
+      { "members.$": 1 }
     );
-    group.admins.push(new mongoose.Types.ObjectId(memberId));
-    await group.save();
+
+    //check if not found in members
+    !group ? createError(404, "There are no member with this ID") : null;
+
+    //extract info about the member
+
+    const member = group.members[0];
+    await Group.findByIdAndUpdate(groupId, {
+      $pull: { members: member },
+      $push: { admins: member },
+    });
+
     res.status(200).json({
-      message: `${member.firstName} ${member.lastName} has been admin`,
+      message: `This member has been made an admin.`,
+      member,
     });
-  } catch (error) {}
-};
-
-export const createPost = async (req, res, next) => {
-  const description = req.body.description;
-  const assets = req.files;
-  const groupId = req.body.groupId;
-  const userType = req.type;
-  const user = req.user;
-
-  try {
-    const group = await Group.findById(groupId);
-
-    if (userType === "member" && group.whoCanPost === "adminsAndModerator") {
-      const error = new Error("You can not post just for admins and moderator");
-      error.statusCode = 403;
-    }
-
-    if (!description && !assets) {
-      const error = new Error("All fields is empty");
-      error.statusCode = 400;
-      throw error;
-    }
-
-    fileFilterPhotosAndVideos(assets);
-
-    let publicidAndLink = [];
-    let desc = "";
-    if (assets) {
-      publicidAndLink = await uploadAssets(assets, "Assets from group");
-      console.log(publicidAndLink);
-    }
-
-    if (description) {
-      desc = description;
-    }
-
-    const post = new Post({
-      description: desc,
-      userId: new mongoose.Types.ObjectId(req.userId),
-      assets: publicidAndLink,
-      group: group._id,
-    });
-
-    if (
-      group.immediatePost === false &&
-      userType !== "admin" &&
-      userType !== "moderator"
-    ) {
-      const session = await mongoose.startSession();
-      session.startTransaction();
-
-      try {
-        const result = await post.save();
-        result.link = hostOnline + "/group" + "/" + result._id.toString();
-        group.requestPosts.push({
-          postId: result._id,
-          userId: new mongoose.Types.ObjectId(req.userId),
-        });
-        await result.save({ session });
-        await group.save({ session });
-
-        res.status(200).json({ message: "Your post has forwarded to admin" });
-      } catch (error) {
-        throw error;
-      } finally {
-        session.endSession();
-      }
-    } else {
-      const session = await mongoose.startSession();
-      session.startTransaction();
-
-      try {
-        const result = await post.save();
-        result.link =
-          hostOnline + "/group" + "/" + groupId + "/" + result._id.toString();
-
-        group.posts.push({
-          postId: result._id,
-          userId: new mongoose.Types.ObjectId(req.userId),
-          from: userType,
-        });
-        await result.save();
-        await group.save();
-
-        res.status(200).json({ message: "Your post created" });
-      } catch (error) {
-        throw error;
-      } finally {
-        session.endSession();
-      }
-    }
   } catch (error) {
-    if (!error.statusCode) {
-      error.statusCode = 500;
-    }
     next(error);
   }
 };
 
-export const updatePost = async (req, res, next) => {
-  //extract data
-  const description = req.body.description;
-  const deletedAssets = req.body.deletedAssets;
-  const assets = req.files;
-  const postId = req.body.postId;
+export const AcceptRequestJoin = async (req, res, next) => {
+  const userId = req.body.userId; // لبعت انضمام
   const groupId = req.body.groupId;
-  const userType = req.type;
-  const user = req.user;
+  const userRole = req.Role;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const group = await Group.findOneAndUpdate(
+      {
+        _id: groupId,
+        "joiningRequests.userId": { $eq: userId },
+        whoCanApproveMemberRequest:
+          userRole === groupRoles.MEMBER
+            ? { $ne: WhoCanPostorApproveMemberRequest.ADMINS_AND_MODERATOR }
+            : {
+                $in: [
+                  WhoCanPostorApproveMemberRequest.ANY_ONE_IN_GROUP,
+                  WhoCanPostorApproveMemberRequest.ADMINS_AND_MODERATOR,
+                ],
+              },
+      },
+      {
+        $pull: { joiningRequests: { userId: userId } },
+        $push: { members: { userId: userId, joiningDate: new Date() } },
+      },
+      {
+        new: true,
+        select: "_id",
+        session,
+      }
+    );
+
+    //check if he send request
+    !group
+      ? createError(400, " User did not send request or you can accept request")
+      : null;
+
+    //save changes in db
+    await User.updateOne(
+      { _id: userId },
+      {
+        $push: { groups: groupId },
+        $pull: { sentInvitesFromGroups: { groupId: groupId } },
+      },
+      { session }
+    );
+    await session.commitTransaction();
+    session.endSession();
+    //send response
+    res.status(200).json({
+      message: `succss`,
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    next(error);
+  }
+};
+export const rejectRequestJoin = async (req, res, next) => {
+  const userId = req.body.userId; //id لبعت انضمام
+  const groupId = req.body.groupId;
 
   try {
-    const group = await Group.findById(groupId);
-    const oldPost = group.posts.find(
-      (obj) =>
-        obj.postId.toString() === postId &&
-        obj.userId.toString() === user._id.toString()
+    const group = await Group.findOneAndUpdate(
+      {
+        _id: groupId,
+        "joiningRequests.userId": { $eq: userId },
+      },
+      { $pull: { joiningRequests: { userId: userId } } },
+      {
+        new: true,
+        select: "_id",
+      }
     );
-    //chekc post from coll group
-    if (!oldPost) {
-      const error = new Error(
-        "The post not found or You are not the owner of the post"
-      );
-      error.statusCode = 404;
-      throw error;
+    //check if he send request
+    !group ? createError(404, " User did not send request") : null;
+
+    res.status(200).json({
+      message: `You reject the request `,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const acceptRequestPost = async (req, res, next) => {
+  const groupId = req.body.groupId;
+  const _idPost = req.body._id; //_id post from posts collection  because when get will admin have it
+
+  try {
+    const group = await Group.findOneAndUpdate(
+      {
+        _id: groupId,
+        "requestPosts.postId": { $in: _idPost },
+      },
+      {
+        $pull: { requestPosts: { postId: _idPost } },
+        $push: { posts: _idPost },
+      },
+      {
+        new: true, //
+        select: "_id", //
+      }
+    );
+
+    !group ? createError("404", "There are no post with this ID") : null;
+
+    res.status(200).json({ message: "Post has been accepted" });
+  } catch (error) {
+    next(error);
+  }
+};
+export const rejectRequestPost = async (req, res, next) => {
+  const groupId = req.body.groupId;
+  const _idPost = req.body._id;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const group = await Group.findOneAndUpdate(
+      {
+        _id: groupId,
+        "requestPosts.postId": { $in: _idPost },
+      },
+      {
+        $pull: { requestPosts: { postId: _idPost } },
+      },
+      {
+        new: true, //
+        select: "_id", //
+        session,
+      }
+    );
+    !group ? createError("404", "There are no post with this ID") : null;
+
+    const post = await Post.findById(_idPost, { assets: 1 });
+
+    const extractedAssets = post.assets;
+    let done = 0;
+    await Post.findByIdAndDelete(post._id, { session });
+    done = 1;
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).json({ message: "Post has been Deleted" });
+
+    if (extractedAssets.length > 0 && done === 1) {
+      await deleteAssets(extractedAssets);
     }
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    next(error);
+  }
+};
 
-    if (!description && !assets) {
-      const error = new Error("All fields is empty");
-      error.statusCode = 400;
-      throw error;
+export const reportPost = async (req, res, next) => {
+  const postId = req.body.postId;
+  const groupId = req.body.groupId;
+  const description = req.body.description;
+  const yourId = req.userId;
+  const userRole = req.role;
+
+  try {
+    if (userRole === groupRoles.MODERATOR) {
+      createError(403, "No need to Report You are the moderator");
     }
-    //note
-    //check post if found from post doc === if course should found if already found in posts array in doc group
-    //beacuse when remove post from post doc you want too remove from array posts in group doc
-
-    //get post from post collection
-    const post = await Post.findById(postId);
-
-    //this always not be false from 'note'
+    if (!description) {
+      createError(422, "description is empty");
+    }
+    const post = await Post.findById(postId, {
+      _id: 1,
+      userId: 1,
+      userRole: 1,
+    });
     if (!post) {
-      const error = new Error("Post not found");
-      error.statusCode = 404;
-      throw error;
-    }
-    //
-
-    if (post.userId.toString() !== user._id.toString()) {
-      const error = new Error("Forbidden");
-      error.statusCode = 403;
-      throw error;
+      createError(404, "There are no post with this ID");
     }
 
-    //check public id for assets user want delete should be in doc post
-    //check all keys is found from client(puid-resourcetype)
-    if (deletedAssets) {
-      for (let i = 0; i < deletedAssets.length; i++) {
-        if (
-          "public_id" in deletedAssets[i] &&
-          "resource_type" in deletedAssets[i]
-        ) {
-          continue;
-        } else {
-          const error = new Error("Some missing key in assets you want delete");
-          error.statusCode = 404;
-          throw error;
-        }
-      }
-      for (let i = 0; i < deletedAssets.length; i++) {
-        const public_id = deletedAssets[i].public_id;
-        const found = post.assets.some((obj) => obj.public_id === public_id);
-
-        if (found) {
-          continue;
-        } else {
-          const error = new Error("Wrong in public id");
-          error.statusCode = 422;
-          throw error;
-        }
-      }
+    if (yourId.toString() === post.userId.toString()) {
+      createError(403, "You can not report on your self");
+    }
+    if (post.userRole === groupRoles.MODERATOR) {
+      createError(403, "You cannot report about the group manager");
     }
 
-    //Here you can start update
-
-    //if user upload new assets
-    var publicidAndLink; // for new assets
-    if (assets) {
-      fileFilterPhotosAndVideos(assets);
-      publicidAndLink = await uploadAssets(assets, "Assets from Group");
+    if (post.userRole === groupRoles.MEMBER && userRole === groupRoles.ADMIN) {
+      createError(403, "No need to report You are  admin");
     }
-    //if user want delete assets //just delete from db for if something happen
-    let assetsAfterDelete = [];
-    if (deletedAssets) {
-      assetsAfterDelete = post.assets.filter((pi) => {
-        return !deletedAssets.some((piD) => pi.public_id === piD.public_id);
+
+    // here you can report
+    const report = {
+      from: yourId,
+      postId: post._id,
+      description: description,
+      idOfOwnerPost: post.userId,
+      reportDate: new Date(),
+    };
+
+    if (userRole === groupRoles.MEMBER) {
+      await Group.updateOne(
+        { _id: groupId },
+        //if he report again for same post remove old and put new
+        [
+          {
+            $set: {
+              reports: {
+                $concatArrays: [
+                  {
+                    $filter: {
+                      input: "$reports",
+                      cond: {
+                        $not: {
+                          $and: [
+                            { $eq: ["$$this.postId", post._id] },
+                            { $eq: ["$$this.from", yourId] },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                  [report],
+                ],
+              },
+            },
+          },
+        ]
+      );
+      res.status(200).json({
+        message:
+          post.userRole === groupRoles.ADMIN
+            ? "Your report has been sent admin will not show your report"
+            : "Your report has been sent",
       });
     }
 
-    //update post in db
-    let newAssets;
-    if (deletedAssets) {
-      newAssets = [...assetsAfterDelete, ...publicidAndLink];
-    } else {
-      newAssets = [...post.assets, ...publicidAndLink];
-    }
-
-    post.description = description;
-    post.assets = newAssets;
-    const result = await post.save();
-    if (deletedAssets) {
-      await deleteAssets(deletedAssets);
-    }
-    res.status(200).json({ message: "Post was updated", post: result });
-  } catch (error) {
-    if (publicidAndLink) {
-      console.log("first");
-      await deleteAssets(publicidAndLink);
-    }
-    if (!error.statusCode) {
-      error.statusCode = 500;
-    }
-    next(error);
-  }
-};
-export const deletePost = async (req, res, next) => {
-  const groupId = req.body.groupId;
-  const postId = req.body.postId;
-  const userType = req.type;
-  const user = req.user;
-
-  try {
-    const group = await Group.findById(groupId);
-    const post = await Post.findById(postId);
-
-    //post from group collection
-    const postFromGroupCollection = group.posts.find(
-      (obj) => obj.postId.toString() === postId
-    );
-
-    console.log(postFromGroupCollection);
-
-    if (!post || !postFromGroupCollection) {
-      const error = new Error("Post not found");
-      error.statusCode = 404;
-      throw error;
-    }
-
-    let canDelete = false;
-
-    if (userType === "member") {
-      if (
-        post.userId === user._id &&
-        postFromGroupCollection.userId === user._id
-      ) {
-        canDelete = true;
-      }
-    }
-
-    if (userType === "admin" || userType === "moderator") {
-      canDelete = true;
-    }
-
-    if (!canDelete) {
-      const error = new Error("Forbidden");
-      error.statusCode = 403;
-      throw error;
-    }
-
-    const extractedAssets = post.assets;
-
-    await Post.findByIdAndDelete(postId);
-
-    const newArrayPostsInDocGroup = group.posts.filter(
-      (post) => post.postId.toString() !== postId
-    );
-    group.posts = newArrayPostsInDocGroup;
-    await group.save();
-    if (extractedAssets.length > 0) {
-      await deleteAssets(extractedAssets);
-    }
-
-    res.status(200).json({ message: "Post was Deleted" });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const sendRequestJoin = async (req, res, next) => {
-  const groupId = req.body.groupId;
-  const userId = req.userId;
-
-  try {
-    //check user if found
-    const user = await User.findById(userId, {
-      _id: 1,
-      sentInvitesFromGroups: 1,
-      groups: 1,
-      joiningRequestsToGroups: 1,
-    });
-
-    if (!user) {
-      const error = new Error("Auth Faild");
-      error.statusCode = 401;
-      throw error;
-    }
-
-    //check group if found
-    const group = await Group.findById(groupId);
-
-    if (!group) {
-      const error = new Error("Did not found The  group");
-      error.statusCode = 404;
-      throw error;
-    }
-    //هل داعي اتحقق انو ال المستخدم ليس موجود بالجروب عطول لازم يكون صح مانو موجود  رح اتحقق اذا الفرونت اعد يختبر مثلا من البوست المان
-    //لازم ابحث بالمدير و ادمن والاعضاء
-
-    const isUserFoundInModerator = group.moderator.toString() === userId;
-    const isUserFoundInAdmins = group.admins.includes(
-      new mongoose.Types.ObjectId(userId)
-    );
-    const isUserFoundInMembers = group.members.includes(
-      new mongoose.Types.ObjectId(userId)
-    );
-
-    if (isUserFoundInModerator || isUserFoundInAdmins || isUserFoundInMembers) {
-      const error = new Error("User already in group");
-      error.statusCode = 400;
-      throw error;
-    }
-    //check if user already send a request in doc group
-    const isUserSendRequestJoin = group.joiningRequests.includes(
-      new mongoose.Types.ObjectId(userId)
-    );
-    // also check in user doc
-    const isUserSendRequestJoinFromUserDoc =
-      user.joiningRequestsToGroups.includes(groupId);
-
-    if (isUserSendRequestJoin || isUserSendRequestJoinFromUserDoc) {
-      const error = new Error("User already send request to join");
-      error.statusCode = 400;
-      throw error;
-    }
-
-    //if group is hidden and not sentInvites  -->forbidden
-    //دعوة بشكل عام مابهم عضو او ادمن
-    const isUserSendToHimInvite = user.sentInvitesFromGroups.find(
-      (invite) => invite.groupId.toString() === group._id.toString()
-    );
-    if (group.visibility === "hidden" && !isUserSendToHimInvite) {
-      const error = new Error("You can not send request - Forbidden");
-      error.statusCode = 403;
-      throw error;
-    }
-
-    //here we will send req or join immdiate
-
-    // if user send to him invite from admin or moderator
-    //if user send to him invite from member
-    const isUserSendToHimInviteFromAdminOrModerator =
-      user.sentInvitesFromGroups.find(
-        (invite) =>
-          invite.groupId.toString() === group._id.toString() &&
-          (invite.senderType === "admin" || invite.senderType === "moderator")
+    if (userRole === groupRoles.ADMIN) {
+      await Group.updateOne(
+        { _id: groupId },
+        //if he report again for same post remove old and put new
+        [
+          {
+            $set: {
+              reports: {
+                $concatArrays: [
+                  {
+                    $filter: {
+                      input: "$reportsFromAdmin",
+                      cond: {
+                        $not: {
+                          $and: [
+                            { $eq: ["$$this.postId", post._id] },
+                            { $eq: ["$$this.from", yourId] },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                  [report],
+                ],
+              },
+            },
+          },
+        ]
       );
-    const isUserSendToHimInviteFromMember = user.sentInvitesFromGroups.find(
-      (invite) =>
-        invite.groupId.toString() === group._id.toString() &&
-        invite.senderType === "member"
-    );
-
-    if (group.visibility === "visible") {
-      if (group.privacy === "private") {
-        if (isUserSendToHimInviteFromAdminOrModerator) {
-          //join immdiate
-          group.members.push(new mongoose.Types.ObjectId(userId));
-          user.groups.push({ groupId: group._id, role: "member" });
-          user.sentInvitesFromGroups.pull({
-            groupId: new mongoose.Types.ObjectId(groupId),
-          });
-
-          await group.save();
-          await user.save();
-          res.status(200).json({ message: "You joined to the group" });
-        } else if (isUserSendToHimInviteFromMember) {
-          group.joiningRequests.push(new mongoose.Types.ObjectId(userId));
-          user.joiningRequestsToGroups.push(group._id);
-          user.sentInvitesFromGroups.pull({
-            groupId: new mongoose.Types.ObjectId(groupId),
-          });
-
-          await group.save();
-          await user.save();
-          res.status(200).json({ message: "Your request was sent" });
-        } else {
-          group.joiningRequests.push(new mongoose.Types.ObjectId(userId));
-          user.joiningRequestsToGroups.push(group._id);
-          user.sentInvitesFromGroups.pull({
-            groupId: new mongoose.Types.ObjectId(groupId),
-          });
-          await group.save();
-          await user.save();
-          res.status(200).json({ message: "Your request was sent" });
-        }
-      } else {
-        //هون الانضمام مباشر بس اذا في دعوة محيها
-        if (isUserSendToHimInvite) {
-          user.sentInvitesFromGroups.pull({
-            groupId: new mongoose.Types.ObjectId(groupId),
-          });
-        }
-
-        group.members.push(new mongoose.Types.ObjectId(userId));
-        user.groups.push({ groupId: group._id, role: "member" });
-        await group.save();
-        await user.save();
-        res.status(200).json({ message: "You joined to the group" });
-      }
-    } else {
-      if (isUserSendToHimInviteFromAdminOrModerator) {
-        //join immdiate
-        group.members.push(new mongoose.Types.ObjectId(userId));
-        user.groups.push({ groupId: group._id, role: "member" });
-        user.sentInvitesFromGroups.pull({
-          groupId: new mongoose.Types.ObjectId(groupId),
-        });
-
-        await group.save();
-        await user.save();
-        res.status(200).json({ message: "You joined to the group" });
-      } else if (isUserSendToHimInviteFromMember) {
-        group.joiningRequests.push(new mongoose.Types.ObjectId(userId));
-        user.joiningRequestsToGroups.push(group._id);
-        user.sentInvitesFromGroups.pull({
-          groupId: new mongoose.Types.ObjectId(groupId),
-        });
-
-        await group.save();
-        await user.save();
-        res.status(200).json({ message: "Your request was sent" });
-      } else {
-        const error = new Error("You can not send request - Forbidden");
-        error.statusCode = 403;
-        throw error;
-      }
+      res
+        .status(200)
+        .json({ message: "Your report has been sent to moderator" });
     }
   } catch (error) {
     next(error);
   }
 };
 
-export const cancelRequestJoin = async (req, res, next) => {
-  const groupId = req.body.groupId;
-  const userId = req.userId;
+export const deleteReportPostFromAdmin = async (req, res, next) => {
+  const _idReport = req.body._id;
+  const groupId = req.body.group._id;
 
   try {
-    //check user if found
-    const user = await User.findById(userId, {
-      _id: 1,
-      joiningRequestsToGroups: 1,
-    });
-
-    if (!user) {
-      const error = new Error("Auth Faild");
-      error.statusCode = 401;
-      throw error;
-    }
-
-    //check group if found
-    const group = await Group.findById(groupId);
-
-    if (!group) {
-      const error = new Error("Did not found group");
-      error.statusCode = 404;
-      throw error;
-    }
-
-    const isUserFoundInModerator = group.moderator.toString() === userId;
-    const isUserFoundInAdmins = group.admins.includes(
-      new mongoose.Types.ObjectId(userId)
-    );
-    const isUserFoundInMembers = group.members.includes(
-      new mongoose.Types.ObjectId(userId)
-    );
-
-    if (isUserFoundInModerator || isUserFoundInAdmins || isUserFoundInMembers) {
-      const error = new Error(
-        "User already in group how cancel request or invaite ????????"
-      );
-      error.statusCode = 400;
-      throw error;
-    }
-    // check if user already send a request
-    const isUserSendRequestJoin = group.joiningRequests.includes(user._id);
-
-    //also check in user doc
-    const isUserSendRequestJoinFromUserDoc =
-      user.joiningRequestsToGroups.includes(group._id);
-
-    if (!isUserSendRequestJoin && !isUserSendRequestJoinFromUserDoc) {
-      const error = new Error("User did not send a joining Request to Cancel ");
-      error.statusCode = 400;
-      throw error;
-    }
-
-    group.joiningRequests.pull(user._id);
-    user.joiningRequestsToGroups.pull(group._id);
-    await group.save();
-    res.status(200).json({ message: "Joining request was Canceled  " });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const cancelInvite = async (req, res, next) => {
-  const id = req.body.id; //id الدعوة  // every doc contain _id ,senderId,...
-  const userId = req.userId;
-  try {
-    const user = await User.findById(userId, {
-      _id: 1,
-      sentInvitesFromGroups: 1,
-    });
-
-    if (!user) {
-      const error = new Error("Auth Faild");
-      error.statusCode = 401;
-      throw error;
-    }
-
-    const invite = user.sentInvitesFromGroups.find(
-      (invite) => invite._id.toString() === id.toString()
-    );
-
-    if (!invite) {
-      const error = new Error("did not found the invite");
-      error.statusCode = 404;
-      throw error;
-    }
-
-    const group = await Group.findById(invite.groupId, { sentInvites: 1 });
-
-    // if (!group) {
-    //   const error = new Error("did not found the group");
-    //   error.statusCode = 404;
-    //   throw error;
-    // }  //مافي داعي انا عم ارفض دعوة اذا بدي اقبل لازم اتحقق بركي الجروب ملغي
-
-    user.sentInvitesFromGroups.pull({ _id: new mongoose.Types.ObjectId(id) });
-    group.sentInvites.pull({
-      $elemMatch: {
-        addressee: new mongoose.Types.ObjectId(userId),
-        senderId: invite.senderId,
+    const group = await Group.findOneAndUpdate(
+      {
+        _id: groupId,
+        "reportsFromAdmin._id": { $eq: _idReport },
       },
-    });
+      {
+        $pull: { reportsFromAdmin: { _id: _idReport } },
+      },
+      {
+        new: true, //
+        select: "_id", //
+      }
+    );
 
-    await user.save();
-    await group.save();
-    res.status(200).json({ message: "Invite was canceled" });
+    !group ? createError(404, "There are no report with this ID") : null;
+
+    res.status(200).json({ message: "report was deleted" });
   } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteReportPost = async (req, res, next) => {
+  const _idReport = req.body._id;
+  const groupId = req.body.groupId;
+  const yourId = req.userId;
+  try {
+    const group = await Group.findOneAndUpdate(
+      {
+        _id: groupId,
+        "reports._id": { $eq: _idReport },
+        "reports.idOfOwnerPost": { $ne: yourId },
+      },
+      {
+        $pull: { reports: { _id: _idReport } },
+      },
+      {
+        new: true, //
+        select: "_id", //
+      }
+    );
+
+    !group ? createError(404, "There are no report with this ID") : null;
+
+    res.status(200).json({ message: "report has been  deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const blockMemberOrAdmin = async (req, res, next) => {
+  const memberId = req.body.memberId;
+  const keepPosts = +req.body.keepPosts; //0=clear 1=keep
+  const groupId = req.body.groupId;
+  const userRole = req.role;
+  const yourId = req.userId;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    //check validation
+    if (keepPosts !== 0 && keepPosts !== 1) {
+      createError("Keep posts should be 0 or 1");
+    }
+    //maybe enter your id
+    if (yourId.toString() === memberId) {
+      createError(403, "You can not block your self");
+    }
+    //get some info
+    const group = await Group.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(groupId),
+          $or: [
+            {
+              "members.userId": { $eq: new mongoose.Types.ObjectId(memberId) },
+            },
+            { "admins.userId": { $eq: new mongoose.Types.ObjectId(memberId) } },
+          ],
+        },
+      },
+      {
+        $project: {
+          members: {
+            $filter: {
+              input: "$members",
+              as: "member",
+              cond: {
+                $eq: ["$$member.userId", new mongoose.Types.ObjectId(memberId)],
+              },
+            },
+          },
+          admins: {
+            $filter: {
+              input: "$admins",
+              as: "admin",
+              cond: {
+                $eq: ["$$admin.userId", new mongoose.Types.ObjectId(memberId)],
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    group.length === 0
+      ? createError(404, "There no member with this ID")
+      : null;
+
+    //admin block admin-->forbidden
+    if (group[0].admins.length > 0 && userRole === groupRoles.ADMIN) {
+      createError(403, "You can not block admin - Forbidden");
+    }
+
+    let assets = [];
+    let ids = [];
+    //extract assets and ids of posts and assets of commeent for each post
+    if (keepPosts === 0) {
+      const posts = await Post.aggregate([
+        {
+          $match: {
+            userId: new mongoose.Types.ObjectId(memberId),
+            group: new mongoose.Types.ObjectId(groupId),
+          },
+        },
+        { $unwind: { path: "$assets", preserveNullAndEmptyArrays: true } },
+        { $unwind: { path: "$comments", preserveNullAndEmptyArrays: true } },
+        {
+          $unwind: {
+            path: "$comments.assets",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            assets: 1,
+            comments: "$comments.assets",
+          },
+        },
+
+        {
+          $group: {
+            _id: null,
+            assets: { $push: "$assets" },
+            comments: { $push: "$comments" },
+            ids: {
+              $push: "$_id",
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            assets: { $concatArrays: ["$assets", "$comments"] },
+            ids: 1,
+          },
+        },
+      ]);
+
+      if (posts.length > 0) {
+        if (posts[0].assets) {
+          assets = posts[0].assets;
+        }
+        if (posts[0].ids) {
+          ids = posts[0].ids;
+        }
+      }
+    }
+    let done = 0;
+    //update db
+    if (group[0].admins.length > 0) {
+      await Group.updateOne(
+        { _id: groupId },
+        {
+          $pull: {
+            admins: { userId: memberId },
+            reports: { idOfOwnerPost: memberId },
+            reportsFromAdmin: { idOfOwnerPost: memberId },
+            posts: { $in: ids },
+          },
+
+          $push: { membersBlocked: memberId },
+        },
+        {
+          session,
+        }
+      );
+    } else {
+      await Group.updateOne(
+        {
+          $pull: {
+            members: { userId: new mongoose.Types.ObjectId(memberId) },
+            reports: { idOfOwnerPost: new mongoose.Types.ObjectId(memberId) },
+            posts: { $in: ids },
+            requestPosts: { postId: _idPost },
+          },
+
+          $push: { membersBlocked: new mongoose.Types.ObjectId(memberId) },
+        },
+        {
+          session,
+        }
+      );
+    }
+    //update user document
+    await User.updateOne(
+      { _id: memberId },
+      {
+        $pull: { groups: group[0]._id },
+        $push: { blockedGroups: group[0]._id },
+      },
+      {
+        session,
+      }
+    );
+    //delete posts
+    if (keepPosts === 0) {
+      await Post.deleteMany(
+        {
+          _id: { $in: ids },
+        },
+        {
+          session,
+        }
+      );
+    }
+
+    done = 1;
+    await session.commitTransaction();
+    session.endSession();
+    //send request
+    res.status(200).json({
+      message: `The Member has been blocked ${
+        keepPosts === 0 ? "and all his posts was removed" : ""
+      }`,
+    });
+    //delete assets from db
+    if (assets.length > 0 && done === 1) {
+      await deleteAssets(assets);
+    }
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    next(error);
+  }
+};
+
+export const unblockMember = async (req, res, next) => {
+  const memberId = req.body.memberId;
+  const groupId = req.body.groupId;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    //In one call find and update
+    const group = await Group.findOneAndUpdate(
+      {
+        _id: groupId,
+        membersBlocked: { $in: memberId },
+      },
+      {
+        $pull: { membersBlocked: memberId },
+        $push: { members: { userId: memberId, joiningDate: new Date() } },
+      },
+      {
+        new: true, //
+        select: "_id", //
+        session,
+      }
+    );
+    //check if did not find
+    !group ? createError(404, "There are no member with this ID") : null;
+
+    //update user in users collection
+    await User.updateOne(
+      {
+        _id: memberId,
+      },
+      {
+        $pull: { blockedGroups: groupId },
+        $push: { groups: groupId },
+      },
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+    //return response
+    res.status(200).json({
+      message: `The member has been unblocked`,
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    next(error);
+  }
+};
+
+export const leaveGroup = async (req, res, next) => {
+  const groupId = req.body.groupId;
+  const userRole = req.role;
+  const yourId = req.userId;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    //if you are  admin and you want leave
+    if (userRole === groupRoles.ADMIN) {
+      await Group.updateOne(
+        {
+          _id: groupId,
+        },
+        {
+          $pull: { admins: { userId: yourId } },
+        },
+        {
+          session,
+        }
+      );
+    } else if (userRole === groupRoles.MODERATOR) {
+      //get oldest admin and member
+      const result = await Group.aggregate([
+        {
+          $match: {
+            _id: new mongoose.Types.ObjectId(groupId),
+          },
+        },
+        {
+          $project: {
+            oldestAdmin: {
+              $cond: {
+                if: {
+                  $eq: [{ $size: "$admins" }, 0], // Check if the array is empty
+                },
+                then: [],
+                else: {
+                  $reduce: {
+                    input: "$admins",
+                    initialValue: { joiningDate: new Date() }, // Set initial value to a very large date
+                    in: {
+                      $cond: {
+                        if: {
+                          $lt: ["$$this.joiningDate", "$$value.joiningDate"],
+                        },
+                        then: "$$this",
+                        else: "$$value",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            oldestMember: {
+              $cond: {
+                if: {
+                  $eq: [{ $size: "$members" }, 0], // Check if the array is empty
+                },
+                then: [],
+                else: {
+                  $reduce: {
+                    input: "$members",
+                    initialValue: { joiningDate: new Date() }, // Set initial value to a very large date
+                    in: {
+                      $cond: {
+                        if: {
+                          $lt: ["$$this.joiningDate", "$$value.joiningDate"],
+                        },
+                        then: "$$this",
+                        else: "$$value",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      ]);
+
+      //check if there are admins or members
+      Object.keys(result[0].oldestAdmin).length === 0 &&
+      Object.keys(result[0].oldestMember).length === 0
+        ? createError(
+            403,
+            "You can not leave the group - You can deleted it permanantly"
+          )
+        : null;
+
+      //first if there are admin put oldest admin as moderator
+      if (Object.keys(result[0].oldestAdmin).length > 0) {
+        await Group.updateOne(
+          {
+            _id: groupId,
+          },
+          {
+            moderator: result[0].oldestAdmin.userId,
+            $pull: { admins: { userId: result[0].oldestAdmin.userId } },
+          },
+          {
+            session,
+          }
+        );
+      } else {
+        //if there are no admins put oldest member moderator
+        await Group.updateOne(
+          {
+            _id: groupId,
+          },
+          {
+            moderator: result[0].oldestMember.userId,
+            $pull: { members: { userId: result[0].oldestMember.userId } },
+          },
+          {
+            session,
+          }
+        );
+      }
+    } else {
+      //if you are  member and you want leave
+      await Group.updateOne(
+        {
+          _id: groupId,
+        },
+        {
+          $pull: { members: { userId: yourId } },
+        },
+        {
+          session,
+        }
+      );
+    }
+    //update your doc from users collection
+
+    await User.updateOne(
+      { _id: yourId },
+      {
+        $pull: { groups: groupId },
+      },
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+    res.status(200).json({ message: "You left the group" });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    next(error);
+  }
+};
+export const fromAdminToMember = async (req, res, next) => {
+  const groupId = req.body.groupId;
+  const adminId = req.body.adminId;
+
+  try {
+    const group = await Group.findOne(
+      {
+        _id: groupId,
+        admins: {
+          $elemMatch: {
+            userId: adminId,
+          },
+        },
+      },
+
+      {
+        _id: 1,
+        "admins.$": 1,
+      }
+    );
+
+    !group ? createError(404, "There are no admin with this ID") : null;
+
+    await Group.updateOne(
+      {
+        _id: groupId,
+      },
+      {
+        $pull: { admins: { userId: adminId } },
+        $push: { members: group.admins[0] },
+      }
+    );
+
+    res.status(200).json({ message: `The admin become member` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteGroup = async (req, res, next) => {
+  const groupId = req.body.groupId;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    //1-extract ids of members,admins and id of moderator + cover
+    const group = await Group.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(groupId),
+        },
+      },
+      {
+        $project: {
+          admins: 1,
+          members: 1,
+          membersBlocked: 1,
+          moderator: 1,
+          cover: 1,
+        },
+      },
+      { $unwind: { path: "$admins", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$members", preserveNullAndEmptyArrays: true } },
+      {
+        $unwind: { path: "$membersBlocked", preserveNullAndEmptyArrays: true },
+      },
+
+      {
+        $project: {
+          _id: 1,
+          admins: "$admins.userId",
+          members: "$members.userId",
+          membersBlocked: 1,
+          moderator: 1,
+          cover: 1,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          admins: { $push: "$admins" },
+          members: { $push: "$members" },
+          membersBlocked: { $addToSet: "$membersBlocked" },
+          moderator: { $addToSet: "$moderator" },
+          cover: { $addToSet: "$cover" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          allMembers: {
+            $concatArrays: [
+              "$admins",
+              "$members",
+              "$moderator",
+              "$membersBlocked",
+            ],
+          },
+          cover: 1,
+        },
+      },
+      { $unwind: { path: "$cover", preserveNullAndEmptyArrays: true } },
+    ]);
+
+    //2-extract assets and ids of posts +assets of comments
+    let assets = [];
+    let ids = [];
+    //extract assets and ids of posts and assets of comment for each post
+    const posts = await Post.aggregate([
+      {
+        $match: {
+          group: new mongoose.Types.ObjectId(groupId),
+        },
+      },
+      { $unwind: { path: "$assets", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$comments", preserveNullAndEmptyArrays: true } },
+      {
+        $unwind: {
+          path: "$comments.assets",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      {
+        $project: {
+          _id: 1,
+          assets: 1,
+          comments: "$comments.assets",
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          assets: { $push: "$assets" },
+          comments: { $push: "$comments" },
+          ids: {
+            $push: "$_id",
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          assets: { $concatArrays: ["$assets", "$comments"] },
+          ids: 1,
+        },
+      },
+    ]);
+    if (posts.length > 0) {
+      if (posts[0].assets) {
+        assets = posts[0].assets;
+      }
+      if (posts[0].ids) {
+        ids = posts[0].ids;
+      }
+    }
+    if (group[0].cover) {
+      assets.push(group[0].cover);
+    }
+
+    let done = 0;
+    // 3-update users collection : pull group for all member and for member is blocked also pull group
+    let allMembers = group[0].allMembers;
+    await User.updateMany(
+      {
+        _id: { $in: allMembers },
+      },
+      {
+        $pull: {
+          groups: groupId,
+          blockedGroups: groupId,
+        },
+      },
+      {
+        session,
+      }
+    );
+
+    //4-delete all invite from this group
+    await User.updateMany(
+      {},
+      { $pull: { sentInvitesFromGroups: { groupId: groupId } } },
+      {
+        session,
+      }
+    );
+    //5- delete posts
+    await Post.deleteMany({ _id: { $in: ids } }, { session });
+    //6-delete group
+    await Group.deleteOne(
+      { _id: new mongoose.Types.ObjectId(groupId) },
+      { session }
+    );
+    done = 1;
+    await session.commitTransaction();
+    session.endSession();
+    //7-send response
+    res.status(200).json({ message: "done" });
+    //8-delete assets from cloudinary
+    if (assets.length > 0 && done === 1) {
+      await deleteAssets(assets);
+    }
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     next(error);
   }
 };
 
 export const inviteUser = async (req, res, next) => {
-  const user = req.user;
-  const userType = req.type;
+  const yourId = req.userId;
+  const userRole = req.role;
   const groupId = req.body.groupId;
   const addresseeId = req.body.addresseeId;
 
   try {
-    const addressee = await User.findById(addresseeId, {
-      sentInvitesFromGroups: 1,
-      firstName: 1,
-      lastName: 1,
-    });
+    // no need check why? because if not found will not show in friends of sender
+    // const addressee = await User.findById(addresseeId, {
+    //   sentInvitesFromGroups: 1,
+    //   firstName: 1,
+    //   lastName: 1,
+    // });
 
-    if (!addressee) {
-      const error = new Error("did not found addressee");
-      error.statusCode = 404;
-      throw error;
-    }
+    // if (!addressee) {
+    //   createError(404, "There are no addressee with this ID");
+    // }
 
-    const isYourFriend = user.friends.includes(
-      new mongoose.Types.ObjectId(addresseeId)
-    );
-    if (!isYourFriend) {
-      const error = new Error("Not your friend-Forbidden");
-      error.statusCode = 403;
-      throw error;
-    }
-    const group = await Group.findById(groupId);
+    // Check if he is in your friends
 
-    const isaddresseeFoundInModerator =
-      group.moderator.toString() === addresseeId;
-    const isaddresseeFoundInAdmins = group.admins.includes(
-      new mongoose.Types.ObjectId(addresseeId)
-    );
-    const isaddresseeFoundInMembers = group.members.includes(
-      new mongoose.Types.ObjectId(addresseeId)
+    const isYourFriend = await User.findOne(
+      {
+        _id: yourId,
+        friends: { $in: addresseeId },
+      },
+      { select: "_id" }
     );
 
-    if (
-      isaddresseeFoundInModerator ||
-      isaddresseeFoundInAdmins ||
-      isaddresseeFoundInMembers
-    ) {
-      const error = new Error("Addressee already in group");
-      error.statusCode = 400;
-      throw error;
-    }
+    !isYourFriend ? createError(403, "Not among your friends") : null;
 
-    //here can send invite
+    const group = await Group.findOne(
+      {
+        _id: groupId,
+        "members.userId": { $ne: addresseeId },
+        "admins.userId": { $ne: addresseeId },
+        moderator: { $ne: addresseeId },
+        membersBlocked: { $nin: addresseeId },
+      },
+      { _id: 1 }
+    );
 
+    !group ? createError(403, "Forbidden") : null;
+
+    //create object for push to addressee
     const sentInviteFromGroup = {
-      senderId: user._id,
-      senderType: userType,
+      senderId: yourId,
+      senderRole: userRole,
       groupId: group._id,
+      inviteDate: new Date(),
     };
 
-    // if you already send to this user
-    const isInviteSentbeforeFromGroup = addressee.sentInvitesFromGroups.find(
-      (invite) => {
-        return (
-          invite.senderId.toString() === user._id.toString() &&
-          invite.groupId.toString() === group._id.toString()
-        );
+    await User.findOneAndUpdate(
+      { _id: addresseeId },
+      {
+        $pull: {
+          sentInvitesFromGroups: {
+            senderId: yourId,
+            groupId: group._id,
+          },
+        },
       }
     );
-
-    if (isInviteSentbeforeFromGroup) {
-      const error = new Error(
-        `You already sent invite to ${addressee.firstName} ${addressee.lastName} `
-      );
-      error.statusCode = 400;
-      throw error;
-    }
-
-    addressee.sentInvitesFromGroups.push(sentInviteFromGroup);
-
-    await addressee.save();
+    await User.findOneAndUpdate(
+      { _id: addresseeId },
+      {
+        $push: {
+          sentInvitesFromGroups: sentInviteFromGroup,
+        },
+      }
+    );
     res.status(200).json({
-      message: `Invite was sended to ${addressee.firstName} ${addressee.lastName} `,
+      message: `Invite has been sended`,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/////////////////
+
+/////////////////
+
+export const getMainInformations = async (req, res, next) => {
+  const groupId = req.params.groupId;
+
+  const yourId = req.userId;
+
+  const role = req.role;
+  const isHeinvited = req.isHeinvited;
+  const isHeSendRequest = req.isHeSendRequest;
+  const privacy = req.privacy;
+
+  try {
+    if (role === groupRoles.NOT_Member) {
+      const group = await Group.aggregate(
+        mainInformationForNotMembers(
+          groupId,
+          role,
+          isHeSendRequest,
+          isHeinvited,
+          privacy
+        )
+      );
+
+      res.status(200).json({ mainInfo: group });
+    } else if (role === groupRoles.MEMBER) {
+      const group = await Group.aggregate(
+        mainInformationForMembers(
+          groupId,
+          role,
+          isHeSendRequest,
+          isHeinvited,
+          yourId
+        )
+      );
+
+      res.status(200).json({ mainInfo: group });
+    } else {
+      const group = await Group.aggregate(
+        mainInformationForAdminsAndModerator(groupId, role)
+      );
+
+      res.status(200).json({ mainInfo: group });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMembers = async (req, res, next) => {
+  const groupId = req.params.groupId;
+  const role = req.role;
+
+  const ITEMS_PER_PAGE = 20;
+  const page = +req.query.page || 1;
+
+  try {
+    role === groupRoles.NOT_Member ? createError(403, "Forbidden") : null;
+
+    const aggregationResult = await Group.aggregate(
+      members(groupId, page, ITEMS_PER_PAGE)
+    );
+
+    const totalMembers = aggregationResult[0].totalCount;
+
+    res.status(200).json({
+      members: aggregationResult[0].allMembers,
+      extraInfo: information(totalMembers, page, ITEMS_PER_PAGE),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getModerator = async (req, res, next) => {
+  const groupId = req.params.groupId;
+  const role = req.role;
+
+  try {
+    role === groupRoles.NOT_Member ? createError(403, "Forbidden") : null;
+
+    const group = await Group.findById(groupId, {
+      moderator: 1,
+      _id: 0,
+    }).populate({
+      path: "moderator",
+      select: {
+        firstName: 1,
+        lastName: 1,
+        logo: { $arrayElemAt: ["$profilePhotos", -1] },
+      },
+    });
+    res.status(200).json({ moderator: group.moderator });
+  } catch (error) {
+    next(error);
+  }
+};
+export const getAdmins = async (req, res, next) => {
+  const groupId = req.params.groupId;
+  const role = req.role;
+
+  const ITEMS_PER_PAGE = 20;
+  const page = +req.query.page || 1;
+
+  try {
+    role === groupRoles.NOT_Member ? createError(403, "Forbidden") : null;
+
+    const aggregationResult = await Group.aggregate(
+      admins(groupId, page, ITEMS_PER_PAGE)
+    );
+
+    const totalAdmins = aggregationResult[0].totalCount;
+
+    res.status(200).json({
+      admins: aggregationResult[0].admins,
+      extraInfo: information(totalAdmins, page, ITEMS_PER_PAGE),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getPosts = async (req, res, next) => {
+  const groupId = req.params.groupId;
+  const role = req.role;
+  const yourId = req.userId;
+  const ITEMS_PER_PAGE = 20;
+  const page = +req.query.page || 1;
+  const profilesYouBlocked = req.profilesYouBlocked;
+  const blockedProfiles = req.blockedProfiles;
+
+  try {
+    role === groupRoles.NOT_Member && req.privacy === privacyGroup.PRIVATE
+      ? createError(403, "Forbidden..")
+      : null;
+
+    const aggregationResult = await Post.aggregate(
+      posts(
+        groupId,
+        blockedProfiles,
+        profilesYouBlocked,
+        role,
+        yourId,
+        page,
+        ITEMS_PER_PAGE
+      )
+    );
+
+    const totalPosts = aggregationResult[0].totalCount;
+
+    res.status(200).json({
+      posts: aggregationResult[0].posts,
+      extraInfo: information(totalPosts, page, ITEMS_PER_PAGE),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//this is for admins and moderator
+export const getRequestPosts = async (req, res, next) => {
+  const groupId = req.params.groupId;
+  const role = req.role;
+  const ITEMS_PER_PAGE = 20;
+  const page = +req.query.page || 1;
+
+  try {
+    role === groupRoles.NOT_Member || role === groupRoles.MEMBER
+      ? createError(403, "Forbidden")
+      : null;
+
+    const aggregationResult = await Group.aggregate(
+      requestPosts(groupId, page, ITEMS_PER_PAGE)
+    );
+
+    const totalRequestPosts = aggregationResult[0].totalCount;
+
+    res.status(200).json({
+      requestPosts: aggregationResult[0].requestPosts,
+      extraInfo: information(totalRequestPosts, page, ITEMS_PER_PAGE),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+//get your requestposts
+//this for members
+export const getYourRequestPosts = async (req, res, next) => {
+  const groupId = req.params.groupId;
+  const role = req.role;
+  const ITEMS_PER_PAGE = 20;
+  const page = +req.query.page || 1;
+  const yourId = req.userId;
+  try {
+    role !== groupRoles.MEMBER ? createError(403, "Forbidden") : null;
+
+    const aggregationResult = await Group.aggregate(
+      yourRequestPost(groupId, yourId, page, ITEMS_PER_PAGE)
+    );
+
+    const totalRequestPosts = aggregationResult[0].totalCount;
+
+    res.status(200).json({
+      requestPosts: aggregationResult[0].requestPosts,
+      extraInfo: information(totalRequestPosts, page, ITEMS_PER_PAGE),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getJoiningRequests = async (req, res, next) => {
+  const groupId = req.params.groupId;
+  const ITEMS_PER_PAGE = 20;
+  const page = +req.query.page || 1;
+  const role = req.role;
+  const whoCanApproveMemberRequest = req.whoCanApproveMemberRequest;
+  try {
+    role === groupRoles.NOT_Member ||
+    (role === groupRoles.MEMBER &&
+      whoCanApproveMemberRequest !== "anyoneInGroup")
+      ? createError(403, "Forbidden")
+      : null;
+
+    const aggregationResult = await Group.aggregate(
+      joiningRequest(groupId, ITEMS_PER_PAGE, page)
+    );
+
+    const totaljoiningRequests = aggregationResult[0].totalCount;
+
+    res.status(200).json({
+      joiningRequests: aggregationResult[0].joiningRequests,
+      extraInfo: information(totaljoiningRequests, page, ITEMS_PER_PAGE),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getReports = async (req, res, next) => {
+  const groupId = req.params.groupId;
+  const role = req.role;
+  const yourId = req.userId;
+  const ITEMS_PER_PAGE = 2;
+  const page = +req.query.page || 1;
+
+  try {
+    role === groupRoles.NOT_Member || role === groupRoles.MEMBER
+      ? createError(403, "Forbidden")
+      : null;
+
+    const aggregationResult = await Group.aggregate(
+      reports(groupId, yourId, page, ITEMS_PER_PAGE)
+    );
+
+    const totalReports = aggregationResult[0].totalCount;
+
+    res.status(200).json({
+      reports: aggregationResult[0].reports,
+      extraInfo: information(totalReports, page, ITEMS_PER_PAGE),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getReportsFromAdmin = async (req, res, next) => {
+  const groupId = req.params.groupId;
+  const role = req.role;
+
+  const ITEMS_PER_PAGE = 20;
+  const page = +req.query.page || 1;
+
+  try {
+    role !== groupRoles.MODERATOR ? createError(403, "Forbidden") : null;
+
+    const aggregationResult = await Group.aggregate(
+      reportsFromAdmin(groupId, page, ITEMS_PER_PAGE)
+    );
+
+    const totalReports = aggregationResult[0].totalCount;
+
+    res.status(200).json({
+      reports: aggregationResult[0].reports,
+      extraInfo: information(totalReports, page, ITEMS_PER_PAGE),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMembersBlocked = async (req, res, next) => {
+  const groupId = req.params.groupId;
+  const role = req.role;
+
+  const ITEMS_PER_PAGE = 20;
+  const page = +req.query.page || 1;
+
+  try {
+    role === groupRoles.NOT_Member || role === groupRoles.MEMBER
+      ? createError(403, "Forbidden")
+      : null;
+    const group = await Group.findById(groupId)
+      .select({ membersBlocked: 1 })
+      .populate({
+        path: "membersBlocked",
+        select: {
+          _id: 1,
+          firstName: 1,
+          lastName: 1,
+          logo: { $arrayElemAt: ["$profilePhotos", -1] },
+        },
+        options: {
+          skip: (page - 1) * ITEMS_PER_PAGE,
+          limit: ITEMS_PER_PAGE,
+        },
+      });
+
+    res.status(200).json({ members: group.membersBlocked });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getYourFriendsWhoDidNotJoin = async (req, res, next) => {
+  const groupId = req.params.groupId;
+  const role = req.role;
+  const yourId = req.userId;
+  const ITEMS_PER_PAGE = 1;
+  const page = +req.query.page || 1;
+
+  try {
+    role === groupRoles.NOT_Member ? createError(403, "Forbidden") : null;
+
+    const result = await User.find(
+      {
+        friends: { $in: yourId },
+        groups: { $nin: groupId },
+      },
+      {
+        _id: 1,
+        firstName: 1,
+        lastName: 1,
+        logo: { $arrayElemAt: ["$profilePhotos", -1] },
+      }
+    )
+      .skip((page - 1) * ITEMS_PER_PAGE)
+      .limit(ITEMS_PER_PAGE);
+
+    res.json(result);
   } catch (error) {
     next(error);
   }

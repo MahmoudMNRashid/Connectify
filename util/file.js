@@ -1,14 +1,14 @@
 import multer from "multer";
 import sharp from "sharp";
 import cloudinary from "cloudinary";
-import dotenv from 'dotenv'
-dotenv.config()
+import dotenv from "dotenv";
+import { createError } from "./helpers.js";
+dotenv.config();
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,
-  api_key:process.env.CLOUDINARY_API_KEY,
-  api_secret:process.env.CLOUDINARY_API_SECRET,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
-
 
 export const storage = multer.memoryStorage();
 
@@ -57,16 +57,22 @@ export const uploadAssets = async (assets, folder) => {
 
 export const deleteAssets = async (assets) => {
   try {
+    console.log(assets)
+    console.log("start");
     assets.forEach(async (asset) => {
       if (asset.resource_type === "image") {
-        const a = await cloudinary.v2.uploader.destroy(asset.public_id);
+        console.log("its image");
+        const result = await cloudinary.v2.uploader.destroy(asset.public_id);
+        console.log(result);
       } else if (asset.resource_type === "video") {
-        await cloudinary.v2.uploader.destroy(asset.public_id, {
+        console.log("its video ");
+        const result = await cloudinary.v2.uploader.destroy(asset.public_id, {
           resource_type: "video",
         });
+        console.log(result);
       } else {
         const error = new Error("Unknown resource_type");
-        error.statusCode=404;
+        error.statusCode = 404;
         throw error;
       }
     });
@@ -78,6 +84,10 @@ export const deleteAssets = async (assets) => {
   }
 };
 
+export const deleteFolder = async (path) => {
+  const result = await cloudinary.v2.api.delete_folder(path);
+  console.log(result);
+};
 export const fileFilterPhotosAndVideos = (assets) => {
   const allowedImageTypes = ["image/png", "image/jpg", "image/jpeg"];
   const allowedVideoTypes = [
@@ -97,11 +107,23 @@ export const fileFilterPhotosAndVideos = (assets) => {
     ) {
       continue;
     } else {
-      const error = new Error(
-        `Invalid file: ${file.originalname} or Size too big`
-      );
-      error.statusCode = 422;
-      throw error;
+      createError(422, `Invalid file: ${file.originalname} or Size too big`);
+    }
+  }
+  return true;
+};
+
+export const FilterPhotoTypeAndSize = (assets) => {
+  const allowedImageTypes = ["image/png", "image/jpg", "image/jpeg"];
+  const maxImageSize = 10 * 1024 * 1024; // 10 MB
+  for (const file of assets) {
+    if (
+      allowedImageTypes.includes(file.mimetype) &&
+      file.size <= maxImageSize
+    ) {
+      continue;
+    } else {
+      createError(422, `Invalid file: ${file.originalname} Should be png,jpg,jpeg and size should be less 10 MB`);
     }
   }
   return true;

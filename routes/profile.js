@@ -1,14 +1,14 @@
 import express from "express";
-import { body } from "express-validator";
+import { body, param, query } from "express-validator";
 import { isAuth } from "../middleware/is-Auth.js";
 import {
-  updateProfilePhoto as updateProfilePhotoController,
+  addProfilePhotoAndSet as addProfilePhotoAndSetController,
+  setPreviousPhotoAsCurrentProfilePhoto as setPreviousPhotoAsCurrentProfilePhotoController,
   updateProfileBio as updateProfileBioController,
   updateProfileBackgroundPhoto as updateProfileBackgroundPhotoController,
   updateProfileBirthday as updateProfileBirthdayController,
   updateProfileGender as updateProfileGenderController,
   updateFirstAndLastName as updateFirstAndLastNameController,
-  deleteProfilePhoto as deleteProfilePhotoController,
   deleteProfileBackgroundPhoto as deleteProfileBackgroundPhotoController,
   addEducationCollege as addEducationCollegeController,
   addEducationHighSchool as addEducationHighSchoolController,
@@ -27,14 +27,49 @@ import {
   deletePhoneNumber as deletePhoneNumberController,
   sendFriendRequest as sendFriendRequestController,
   acceptFriendRequest as acceptFriendRequestController,
-  cancelFriendRequest as cancelFriendRequestController,
+  cancelFriendRequestSentToMe as cancelFriendRequestSentToMeController,
+  cancelFriendRequestSentByMe as cancelFriendRequestSentByMeController,
   unfriend as unfriendController,
+  deleteCurrentProfilePhotoOrPreviousPhoto as deleteCurrentProfilePhotoOrPreviousPhotoController,
+  sendRequestJoin as sendRequestJoinContrller,
+  cancelRequestJoin as cancelRequestJoinController,
+  cancelInvite as cancelInviteContorller,
+  getMainInformation as getMainInformationController,
+  getProfilePosts as getProfilePostsController,
+  getFriends as getFriendsController,
+  getFriendsRequestSentToMe as getFriendsRequestSentToMeController,
+  getFriendsRequestSentByMe as getFriendsRequestSentByMeController,
+  getPagesLiked as getPagesLikedController,
+  getPagesIOwned as getPagesIOwnedController,
+  getGroupsJoined as getGroupsJoinedController,
+  getInvitationsSentToMeFromGroups as getInvitationsSentToMeFromGroupsController,
+  getInvitationsSentToMeFromPages as getInvitationsSentToMeFromPagesController,
+  blockProfile as blockProfileController,
+  unblockProfile as unblockProfileController,
+  getPostsFromAll as getPostsFromAllController,
+  searchAboutPepole as searchAboutPepoleController,
+  searchAboutPages as searchAboutPagesController,
+  searchAboutGroups as searchAboutGroupsController,
+  deleteAccount as deleteAccountController
 } from "../controllers/profile.js";
+import { canSeeWithRole } from "../middleware/for-Profile.js";
 
 const router = express.Router();
 const validGenders = ["male", "female"];
-//update or add photo
-router.patch("/updateProfilePhoto", isAuth, updateProfilePhotoController);
+// add photo
+router.post("/addProfilePhotoAndSet", isAuth, addProfilePhotoAndSetController);
+
+router.post(
+  "/setPreviousPhotoAsCurrentProfilePhoto",
+  isAuth,
+  setPreviousPhotoAsCurrentProfilePhotoController
+);
+router.delete(
+  "/deleteCurrentProfilePhotoOrPreviousPhoto",
+  isAuth,
+  deleteCurrentProfilePhotoOrPreviousPhotoController
+);
+
 //update or add bio
 router.patch("/updateProfileBio", isAuth, updateProfileBioController);
 //update or add background photo
@@ -100,8 +135,7 @@ router.put(
   ],
   updateFirstAndLastNameController
 );
-//delete profile photo
-router.delete("/deleteProfilePhoto", isAuth, deleteProfilePhotoController);
+
 //delete background photo
 router.delete(
   "/deleteBackgroundPhoto",
@@ -232,8 +266,98 @@ router.delete("/deletePhoneNumber", isAuth, deletePhoneNumberController);
 router.post("/sendFriendRequest", isAuth, sendFriendRequestController);
 //accept friend request
 router.post("/acceptFriendRequest", isAuth, acceptFriendRequestController);
-//cancel friend request
-router.post("/cancelFriendRequest", isAuth, cancelFriendRequestController);
+//cancel friend request sent to me
+router.post(
+  "/cancelFriendRequestSentToMe",
+  isAuth,
+  cancelFriendRequestSentToMeController
+);
+//cancel friend request sent by me
+router.post(
+  "/cancelFriendRequestSentByMe",
+  isAuth,
+  cancelFriendRequestSentByMeController
+);
+
 //unfriend
 router.post("/unfriend", isAuth, unfriendController);
+
+router.post("/sendRequestJoin", isAuth, sendRequestJoinContrller);
+router.post("/cancelRequestJoin", isAuth, cancelRequestJoinController);
+router.post("/cancelInvite", isAuth, cancelInviteContorller);
+
+router.post("/blockProfile", isAuth, blockProfileController);
+router.post("/unblockProfile", isAuth, unblockProfileController);
+router.delete("/deleteAccount", isAuth, deleteAccountController);
+
+//Get main info
+router.get(
+  "/mainInfo/:profileId",
+  isAuth,
+  canSeeWithRole,
+  getMainInformationController
+);
+//Get posts
+router.get(
+  "/posts/:profileId",
+  isAuth,
+  canSeeWithRole,
+  getProfilePostsController
+);
+//Get friend
+router.get("/friends/:profileId", isAuth, canSeeWithRole, getFriendsController);
+//Get friends request sent to me
+router.get(
+  "/friendsRequestSentToMe/:profileId",
+  isAuth,
+  canSeeWithRole,
+  getFriendsRequestSentToMeController
+);
+//Get friends request sent by me
+router.get(
+  "/friendsRequestSentByMe/:profileId",
+  isAuth,
+  canSeeWithRole,
+  getFriendsRequestSentByMeController
+);
+//Get pages i liked
+router.get(
+  "/getPagesLiked/:profileId",
+  isAuth,
+  canSeeWithRole,
+  getPagesLikedController
+);
+//Get pages i owned
+router.get(
+  "/getPagesIOwned/:profileId",
+  isAuth,
+  canSeeWithRole,
+  getPagesIOwnedController
+);
+//Get groups i Joined or owned
+router.get(
+  "/getGroupsJoined/:profileId",
+  isAuth,
+  canSeeWithRole,
+  getGroupsJoinedController
+);
+//Get invitations sent to me from groups
+router.get(
+  "/getInvitationsSentToMeFromGroups/:profileId",
+  isAuth,
+  canSeeWithRole,
+  getInvitationsSentToMeFromGroupsController
+);
+//get invitations sent to me from pages
+router.get(
+  "/getInvitationsSentToMeFromPages/:profileId",
+  isAuth,
+  canSeeWithRole,
+  getInvitationsSentToMeFromPagesController
+);
+
+router.get("/homePosts", isAuth, getPostsFromAllController);
+router.get("/searchProfiles", isAuth, searchAboutPepoleController);
+router.get("/searchPages", isAuth, searchAboutPagesController);
+router.get("/searchGroups", isAuth, searchAboutGroupsController);
 export default router;

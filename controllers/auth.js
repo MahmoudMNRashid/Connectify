@@ -9,6 +9,7 @@ import { role } from "../util/auth.js";
 import { hostOnline } from "../util/connect.js";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import { createError } from "../util/helpers.js";
 dotenv.config();
 
 const config = {
@@ -100,15 +101,12 @@ export const signup = async (req, res, next) => {
     const newUser = new User(userDetails);
     await newUser.save();
 
-    return res.status(200).json({
+    res.status(200).json({
       message:
         "Registered successfully,Please check your email for a confirmation link.  i will put link here for test and speedup ",
       link: confirmationLink,
     });
   } catch (error) {
-    if (!error.statusCode) {
-      error.statusCode = 500;
-    }
     next(error);
   }
 };
@@ -123,7 +121,10 @@ export const signin = async (req, res, next) => {
       error.data = errors.array();
       throw error;
     }
-    const user = await User.findOne({ email: email });
+    const user = await User.findOne(
+      { email: email },
+      { confirm: 1, password: 1, role: 1 }
+    );
     if (!user) {
       const error = new Error("Email not found");
       error.statusCode = 404;
@@ -149,16 +150,18 @@ export const signin = async (req, res, next) => {
     const token = jwt.sign(
       { email: user.email, userId: user._id.toString(), role: user.role },
       process.env.PRIVATE_KEY,
-      { expiresIn: "20000h" }
+      { expiresIn: "30d" }
     );
 
     res
       .status(200)
-      .json({ token, userId: user._id.toString(), role: user.role });
+      .json({
+        token,
+        userId: user._id.toString(),
+        role: user.role,
+        experation: 24 * 60 * 60 * 1000 * 30,
+      });
   } catch (error) {
-    if (!error.statusCode) {
-      error.statusCode = 500;
-    }
     next(error);
   }
 };
@@ -166,11 +169,46 @@ export const signin = async (req, res, next) => {
 export const confirm = async (req, res, next) => {
   const token = req.params.token;
   try {
-    const user = await User.findOne({ confirmationToken: token });
+    const user = await User.findOne(
+      { confirmationToken: token },
+      { confirm: 1, confirmationToken: 1 }
+    );
     if (!user) {
-      const error = new Error("Not auth,You Can not confirm your email");
-      error.statusCode = 401;
-      throw error;
+      res.status(401).send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Email Confirmation</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              background-color: #f4f4f4;
+              text-align: center;
+              padding: 20px;
+            }
+    
+            p {
+              color: #555;
+            }
+    
+            a {
+              color: #3498db;
+              text-decoration: none;
+            }
+    
+            a:hover {
+              text-decoration: underline;
+            }
+          </style>
+        </head>
+        <body>
+          <p>Not Authorization  401!</p>
+          
+        </body>
+        </html>
+      `);
     }
 
     user.confirmationToken = undefined;
@@ -207,9 +245,6 @@ export const confirm = async (req, res, next) => {
     </html>
   `);
   } catch (error) {
-    if (!error.statusCode) {
-      error.statusCode = 500;
-    }
     next(error);
   }
 };
@@ -217,16 +252,15 @@ export const confirm = async (req, res, next) => {
 export const resetPassword = async (req, res, next) => {
   const errors = validationResult(req);
   const email = req.body.email;
-  console.log(email);
   try {
     if (!errors.isEmpty()) {
-      const error = new Error("Validation failed");
-      error.statusCode = 422;
-      error.data = errors.array();
-      throw error;
+      createError(422, "Validation failed");
     }
 
-    const user = await User.findOne({ email: email });
+    const user = await User.findOne(
+      { email: email },
+      { email: 1, resetPasswordToken: 1, resetPasswordTokenExpire: 1 }
+    );
     if (!user) {
       const error = new Error("User not found");
       error.statusCode = 404;
@@ -250,32 +284,35 @@ export const resetPassword = async (req, res, next) => {
     return res.status(200).json({
       message: "Please check your email for a Reset Password link. ",
     });
-  } catch (error) {}
+  } catch (error) {
+    next(error);
+  }
 };
 export const newPassword = async (req, res, next) => {
   const errors = validationResult(req);
   const token = req.body.token;
   const userId = req.body.userId;
   const newPassword = req.body.newPassword;
-  console.log(token, userId, newPassword);
   try {
     if (!errors.isEmpty()) {
-      const error = new Error("Validation failed");
-      error.statusCode = 422;
-      error.data = errors.array();
-      throw error;
+      createError(422, "Validation failed");
     }
 
-    const user = await User.findOne({
-      _id: new mongoose.Types.ObjectId(userId),
-      resetPasswordToken: token,
-      resetPasswordTokenExpire: { $gt: Date.now() },
-    });
+    const user = await User.findOne(
+      {
+        _id: new mongoose.Types.ObjectId(userId),
+        resetPasswordToken: token,
+        resetPasswordTokenExpire: { $gt: Date.now() },
+      },
+      {
+        password: 1,
+        resetPasswordToken: 1,
+        resetPasswordTokenExpire: 1,
+      }
+    );
 
     if (!user) {
-      const error = new Error("User not found or Expire Date ended");
-      error.statusCode = 401;
-      throw error;
+      createError(403, "Forbidden");
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
@@ -285,9 +322,6 @@ export const newPassword = async (req, res, next) => {
     await user.save();
     res.status(200).json({ message: "Password reset Successfully " });
   } catch (error) {
-    if (!error.statusCode) {
-      error.statusCode = 500;
-    }
     next(error);
   }
 };

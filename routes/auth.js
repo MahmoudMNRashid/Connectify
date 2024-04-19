@@ -38,7 +38,7 @@ router.put(
     )
       .trim()
       .isLength({ min: 6 })
-      .matches(/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/),
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/),
     body("birthDay", "Invalid date format for birthday")
       .notEmpty()
       .isDate()
