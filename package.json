@@ -1,10 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "start": "nodemon app.js"
-  },
-  "engines": {
-    "node": "20.x"
+    "start": "node app.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
