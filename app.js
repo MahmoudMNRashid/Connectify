@@ -3,7 +3,7 @@ import bodyParser from "body-parser";
 import multer from "multer";
 import dotenv from "dotenv";
 import cors from 'cors'
-import { test,test1,test2,test3 } from "./test.js";
+// import { test,test1,test2,test3 } from "./test.js";
 dotenv.config();
 
 import authRoute from "./routes/auth.js";
@@ -17,10 +17,10 @@ connect();
 app.use(cors());
 
 
-app.post("/test", test3);
-app.get("/test", (req, res) => {
-  res.status(200).json({ message: "Hello World" });
-});
+// app.post("/test", test3);
+// app.get("/test", (req, res) => {
+//   res.status(200).json({ message: "Hello World" });
+// });
 app.use(bodyParser.json()); // application/json
 app.use(multer({ storage }).array("assets"));
 
