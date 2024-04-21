@@ -67,8 +67,6 @@ router.put(
       .isIn(validGenders),
     body("confirmPassword")
       .trim()
-      .isLength({ min: 6 })
-      .matches(/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/)
       .custom((value, { req }) => {
         if (value !== req.body.password) {
           throw "Password Confirmation does not match password";
