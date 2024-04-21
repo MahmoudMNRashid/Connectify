@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 export const app = express();
 export const port = process.env.PORT || 8080;
 export const hostLocal = `http://localhost:${port}`;
-export const hostOnline = `https://connectify-8wsv.onrender.com`;
+export const hostOnline = `https://connectify-eosin.vercel.app`;
 
 export const connect = async () => {
   try {
