@@ -103,10 +103,19 @@ router.post(
 
 router.put(
   "/newPassword",
-  body(
-    "password",
-    "Password must be at least 6 characters long,Password must contain at least one letter, one number, and one special character: @$!%*?&"
-  ),
+  [
+    body(
+      "password",
+      "Password must be at least 6 characters long,Password must contain at least one letter, one number, and one special character: @$!%*?&"
+    )
+      .trim()
+      .isLength({ min: 6 })
+      .matches(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/
+      ),
+    body("userId").isMongoId().withMessage("Wrong Id"),
+    body("token").notEmpty().withMessage("Token Should not be empty"),
+  ],
   newPasswordController
 );
 
