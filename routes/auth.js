@@ -8,6 +8,7 @@ import {
   confirm as confirmController,
   resetPassword as resetPasswordController,
   newPassword as newPasswordController,
+  checkResetPassword as checkResetPasswordController,
 } from "../controllers/auth.js";
 
 const router = express.Router();
@@ -107,5 +108,14 @@ router.put(
     "Password must be at least 6 characters long,Password must contain at least one letter, one number, and one special character: @$!%*?&"
   ),
   newPasswordController
+);
+
+router.post(
+  "/checkResetPassword",
+  [
+    body("userId").isMongoId().withMessage("Wrong Id"),
+    body("token").notEmpty().withMessage("Token Should not be empty"),
+  ],
+  checkResetPasswordController
 );
 export default router;

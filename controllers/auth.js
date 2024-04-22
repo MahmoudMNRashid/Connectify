@@ -153,14 +153,12 @@ export const signin = async (req, res, next) => {
       { expiresIn: "30d" }
     );
 
-    res
-      .status(200)
-      .json({
-        token,
-        userId: user._id.toString(),
-        role: user.role,
-        experation: 24 * 60 * 60 * 1000 * 30,
-      });
+    res.status(200).json({
+      token,
+      userId: user._id.toString(),
+      role: user.role,
+      experation: 24 * 60 * 60 * 1000 * 30,
+    });
   } catch (error) {
     next(error);
   }
@@ -321,6 +319,37 @@ export const newPassword = async (req, res, next) => {
     user.resetPasswordTokenExpire = undefined;
     await user.save();
     res.status(200).json({ message: "Password reset Successfully " });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const checkResetPassword = async (req, res, next) => {
+  const errors = validationResult(req);
+  const token = req.body.token;
+  const userId = req.body.userId;
+
+  try {
+    if (!errors.isEmpty()) {
+      createError(422, "Validation failed");
+    }
+
+    const user = await User.findOne(
+      {
+        _id: new mongoose.Types.ObjectId(userId),
+        resetPasswordToken: token,
+        resetPasswordTokenExpire: { $gt: Date.now() },
+      },
+      {
+        _id: 1,
+      }
+    );
+
+    if (!user) {
+      createError(403, "Forbidden");
+    }
+
+    res.status(200).json({ message: "success" });
   } catch (error) {
     next(error);
   }
