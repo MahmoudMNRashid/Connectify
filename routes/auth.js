@@ -105,7 +105,7 @@ router.put(
   "/newPassword",
   [
     body(
-      "password",
+      "newPassword",
       "Password must be at least 6 characters long,Password must contain at least one letter, one number, and one special character: @$!%*?&"
     )
       .trim()
