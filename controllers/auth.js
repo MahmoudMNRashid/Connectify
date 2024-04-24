@@ -293,7 +293,7 @@ export const newPassword = async (req, res, next) => {
   const newPassword = req.body.newPassword;
   try {
     if (!errors.isEmpty()) {
-      createError(422, "Validation failed");
+      createError(422, "Validation failed", errors.array());
     }
 
     const user = await User.findOne(

@@ -114,7 +114,7 @@ router.put(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/
       ),
     body("userId").isMongoId().withMessage("Wrong Id"),
-    body("token").notEmpty().withMessage("Token Should not be empty"),
+    body("token").notEmpty().withMessage("Token should not be empty"),
   ],
   newPasswordController
 );
@@ -123,7 +123,7 @@ router.post(
   "/checkResetPassword",
   [
     body("userId").isMongoId().withMessage("Wrong Id"),
-    body("token").notEmpty().withMessage("Token Should not be empty"),
+    body("token").notEmpty().withMessage("Token should not be empty"),
   ],
   checkResetPasswordController
 );
