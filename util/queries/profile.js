@@ -494,7 +494,13 @@ export const pagesIOwned = (profileId, page, ITEMS_PER_PAGE) => {
     },
   ];
 };
-export const GroupsJoined = (profileId, page, ITEMS_PER_PAGE, yourId,UniqueIds) => {
+export const GroupsJoined = (
+  profileId,
+  page,
+  ITEMS_PER_PAGE,
+  yourId,
+  UniqueIds
+) => {
   return [
     { $match: { _id: new mongoose.Types.ObjectId(profileId) } },
     {
@@ -560,7 +566,7 @@ export const GroupsJoined = (profileId, page, ITEMS_PER_PAGE, yourId,UniqueIds) 
                 {
                   $and: [
                     {
-                      "membersBlocked": {
+                      membersBlocked: {
                         $nin: [new mongoose.Types.ObjectId(yourId)],
                       },
                     },
@@ -613,7 +619,6 @@ export const GroupsJoined = (profileId, page, ITEMS_PER_PAGE, yourId,UniqueIds) 
               name: 1,
               description: 1,
               cover: 1,
-             
             },
           },
 
@@ -931,6 +936,7 @@ export const postFromAll = (
             then: {
               groupId: "$group._id",
               description: "$group.description",
+              name: "$group.name",
               cover: "$group.cover",
               yourRoleInGroup: {
                 $cond: {
