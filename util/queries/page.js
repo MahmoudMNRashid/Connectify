@@ -1,7 +1,7 @@
 
 import mongoose from "mongoose";
 import { pageRoles } from "../roles.js";
-import { whoCanComment_Page } from "../configPage.js";
+import { whoCanComment_Page,whoCanSee_Page } from "../configPage.js";
 
 export const followers = (pageId, page, ITEMS_PER_PAGE) => {
   return [
@@ -126,7 +126,7 @@ export const posts = (pageId, yourId, role, page, ITEMS_PER_PAGE) => {
               _id: 0,
               filteredPosts: {
                 $cond: {
-                  if: { $eq: [role, rolepageRoles.NOT_FOLLOWERS] },
+                  if: { $eq: [role, pageRoles.NOT_FOLLOWERS] },
                   then: {
                     $filter: {
                       input: ["$$ROOT.who"],
