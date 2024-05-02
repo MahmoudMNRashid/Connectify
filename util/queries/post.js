@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { whoCanComment_Page, whoCanSee_Page } from "../configPage.js";
 import { whoCanSee_Profile } from "../configProfile.js";
 import { groupRoles, pageRoles, profileRoles } from "../roles.js";
@@ -47,7 +48,7 @@ export const commentsForProfilePost = (
                         },
                       },
                     },
-                    else: "$userId",
+                    else: "$usersId",
                   },
                 },
               },
@@ -210,7 +211,7 @@ export const commentsForPagePost = (
                         },
                       },
                     },
-                    else: "$userId",
+                    else: "$usersId",
                   },
                 },
               },
@@ -947,7 +948,7 @@ export const searchInProfilePosts = (
                     $filter: {
                       input: ["$$ROOT.who"],
                       as: "post",
-                      cond: { $eq: ["$$post",  whoCanSee_Profile.PUBLIC] },
+                      cond: { $eq: ["$$post", whoCanSee_Profile.PUBLIC] },
                     },
                   },
                   else: ["$$ROOT.who"],
@@ -1013,7 +1014,12 @@ export const searchInProfilePosts = (
                 $cond: {
                   if: {
                     $and: [
-                      { $eq: [whoCanComment_Page.FOLLOWERS, "$posts.whoCanComment"] },
+                      {
+                        $eq: [
+                          whoCanComment_Page.FOLLOWERS,
+                          "$posts.whoCanComment",
+                        ],
+                      },
                       { $eq: [role, profileRoles.NOT_FRIENDS] },
                     ],
                   },
@@ -1192,7 +1198,12 @@ export const searchInPagePosts = (
                 $cond: {
                   if: {
                     $and: [
-                      { $eq: [whoCanComment_Page.FOLLOWERS, "$posts.whoCanComment"] },
+                      {
+                        $eq: [
+                          whoCanComment_Page.FOLLOWERS,
+                          "$posts.whoCanComment",
+                        ],
+                      },
                       { $eq: [role, pageRoles.NOT_FOLLOWERS] },
                     ],
                   },

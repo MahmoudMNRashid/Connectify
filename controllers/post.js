@@ -975,6 +975,7 @@ export const deleteComment = async (req, res, next) => {
 };
 
 export const getComments = async (req, res, next) => {
+  
   //for all
   const postId = req.params.postId;
   const profileId = req.params.profileId;
@@ -1028,6 +1029,7 @@ export const getComments = async (req, res, next) => {
         extraInfo: information(totalCount, page, ITEMS_PER_PAGE),
       });
     } else if (from === "page") {
+      
       const post = await Post.findOne(
         { _id: postId, page: pageId },
         { whoCanSee: 1 }
