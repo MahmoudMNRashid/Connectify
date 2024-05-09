@@ -474,7 +474,9 @@ export const likePost = async (req, res, next) => {
         );
         !post ? createError(404, " Did not find the post") : null;
 
-        post.whoCanSee === whoCanSee_Page.FOLLOWERS ? createError(403, "Forbidden") : null;
+        post.whoCanSee === whoCanSee_Page.FOLLOWERS
+          ? createError(403, "Forbidden")
+          : null;
         post.whoCanComment === whoCanComment_Page.FOLLOWERS
           ? createError(403, "Forbidden")
           : null;
@@ -536,8 +538,12 @@ export const unlikePost = async (req, res, next) => {
         );
         !post ? createError(404, " Did not find the post") : null;
 
-        post.whoCanSee ===  whoCanSee_Profile.FRIENDS ? createError(403, "Forbidden") : null;
-        post.whoCanComment ===  whoCanSee_Profile.FRIENDS ? createError(403, "Forbidden") : null;
+        post.whoCanSee === whoCanSee_Profile.FRIENDS
+          ? createError(403, "Forbidden")
+          : null;
+        post.whoCanComment === whoCanSee_Profile.FRIENDS
+          ? createError(403, "Forbidden")
+          : null;
       }
     }
     if (from === "page") {
@@ -555,7 +561,9 @@ export const unlikePost = async (req, res, next) => {
         );
         !post ? createError(404, " Did not find the post") : null;
 
-        post.whoCanSee ===whoCanSee_Page.FOLLOWERS ? createError(403, "Forbidden") : null;
+        post.whoCanSee === whoCanSee_Page.FOLLOWERS
+          ? createError(403, "Forbidden")
+          : null;
         post.whoCanComment === whoCanComment_Page.FOLLOWERS
           ? createError(403, "Forbidden")
           : null;
@@ -603,7 +611,7 @@ export const createComment = async (req, res, next) => {
 
   try {
     //Check the Fields
-    !description && !assets
+    (!description || description === "") && (!assets || assets.length === 0)
       ? createError(422, "Desciption and assets all of them are empty")
       : null;
 
@@ -628,8 +636,12 @@ export const createComment = async (req, res, next) => {
         );
         !post ? createError(404, " Did not find the post") : null;
 
-        post.whoCanSee ===  whoCanSee_Profile.FRIENDS ? createError(403, "Forbidden") : null;
-        post.whoCanComment ===  whoCanSee_Profile.FRIENDS ? createError(403, "Forbidden") : null;
+        post.whoCanSee === whoCanSee_Profile.FRIENDS
+          ? createError(403, "Forbidden")
+          : null;
+        post.whoCanComment === whoCanSee_Profile.FRIENDS
+          ? createError(403, "Forbidden")
+          : null;
       }
     }
 
@@ -648,7 +660,9 @@ export const createComment = async (req, res, next) => {
         );
         !post ? createError(404, " Did not find the post") : null;
 
-        post.whoCanSee === whoCanSee_Page.FOLLOWERS ? createError(403, "Forbidden") : null;
+        post.whoCanSee === whoCanSee_Page.FOLLOWERS
+          ? createError(403, "Forbidden")
+          : null;
         post.whoCanComment === whoCanComment_Page.FOLLOWERS
           ? createError(403, "Forbidden")
           : null;
@@ -763,13 +777,17 @@ export const updateComment = async (req, res, next) => {
     !post ? createError(404, "There are no post with this Id") : null;
     if (from === "profile") {
       if (role === profileRoles.NOT_FRIENDS) {
-        post.whoCanSee ===  whoCanSee_Profile.FRIENDS ? createError(403, "Forbidden") : null;
+        post.whoCanSee === whoCanSee_Profile.FRIENDS
+          ? createError(403, "Forbidden")
+          : null;
       }
     }
 
     if (from === "page") {
       if (role === pageRoles.NOT_FOLLOWERS) {
-        post.whoCanSee === whoCanSee_Page.FOLLOWERS ? createError(403, "Forbidden") : null;
+        post.whoCanSee === whoCanSee_Page.FOLLOWERS
+          ? createError(403, "Forbidden")
+          : null;
       }
     }
 
@@ -913,13 +931,17 @@ export const deleteComment = async (req, res, next) => {
 
     if (from === "profile") {
       if (role === profileRoles.NOT_FRIENDS) {
-        post.whoCanSee ===  whoCanSee_Profile.FRIENDS ? createError(403, "Forbidden") : null;
+        post.whoCanSee === whoCanSee_Profile.FRIENDS
+          ? createError(403, "Forbidden")
+          : null;
       }
     }
 
     if (from === "page") {
       if (role === pageRoles.NOT_FOLLOWERS) {
-        post.whoCanSee === whoCanSee_Page.FOLLOWERS ? createError(403, "Forbidden") : null;
+        post.whoCanSee === whoCanSee_Page.FOLLOWERS
+          ? createError(403, "Forbidden")
+          : null;
       }
     }
     //extract comment
@@ -975,7 +997,6 @@ export const deleteComment = async (req, res, next) => {
 };
 
 export const getComments = async (req, res, next) => {
-  
   //for all
   const postId = req.params.postId;
   const profileId = req.params.profileId;
@@ -1006,7 +1027,8 @@ export const getComments = async (req, res, next) => {
       );
       !post ? createError(404, "There is no post with this ID") : null;
 
-      post.whoCanSee ===  whoCanSee_Profile.FRIENDS && role === profileRoles.NOT_FRIENDS
+      post.whoCanSee === whoCanSee_Profile.FRIENDS &&
+      role === profileRoles.NOT_FRIENDS
         ? createError(403, "Forbidden")
         : null;
 
@@ -1029,14 +1051,14 @@ export const getComments = async (req, res, next) => {
         extraInfo: information(totalCount, page, ITEMS_PER_PAGE),
       });
     } else if (from === "page") {
-      
       const post = await Post.findOne(
         { _id: postId, page: pageId },
         { whoCanSee: 1 }
       );
       !post ? createError(404, "There is no post with this ID") : null;
 
-      post.whoCanSee === whoCanSee_Page.FOLLOWERS && role === pageRoles.NOT_FOLLOWERS
+      post.whoCanSee === whoCanSee_Page.FOLLOWERS &&
+      role === pageRoles.NOT_FOLLOWERS
         ? createError(403, "Forbidden")
         : null;
       const aggregationResult = await Post.aggregate(
@@ -1124,7 +1146,8 @@ export const getLikes = async (req, res, next) => {
       );
       !post ? createError(404, "There is no post with this ID") : null;
 
-      post.whoCanSee ===  whoCanSee_Profile.FRIENDS && role === profileRoles.NOT_FRIENDS
+      post.whoCanSee === whoCanSee_Profile.FRIENDS &&
+      role === profileRoles.NOT_FRIENDS
         ? createError(403, "Forbidden")
         : null;
 
@@ -1153,7 +1176,8 @@ export const getLikes = async (req, res, next) => {
       );
       !post ? createError(404, "There is no post with this ID") : null;
 
-      post.whoCanSee === whoCanSee_Page.FOLLOWERS && role === pageRoles.NOT_FOLLOWERS
+      post.whoCanSee === whoCanSee_Page.FOLLOWERS &&
+      role === pageRoles.NOT_FOLLOWERS
         ? createError(403, "Forbidden")
         : null;
       const aggregationResult = await Post.aggregate(
