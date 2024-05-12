@@ -287,6 +287,7 @@ export const resetPassword = async (req, res, next) => {
   }
 };
 export const newPassword = async (req, res, next) => {
+ //a
   const errors = validationResult(req);
   const token = req.body.token;
   const userId = req.body.userId;
