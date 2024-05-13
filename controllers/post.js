@@ -608,8 +608,6 @@ export const createComment = async (req, res, next) => {
   const pageId = req.body.pageId;
   const groupId = req.body.groupId;
   const profileId = req.body.profileId;
-  const fullName = req.fullName;
-  const logo = req.logo;
 
   try {
     //Check the Fields
@@ -720,14 +718,7 @@ export const createComment = async (req, res, next) => {
     );
     !post ? createError(404, "did not find the post") : null;
     done = 1;
-    comment = {
-      ...comment,
-      owner: {
-        firstName: fullName.firstName,
-        lastName: fullName.lastName,
-        logo,
-      },
-    };
+    
     res.status(200).json({ message: "Your comment has been created", comment });
   } catch (error) {
     //if something happen delete assets you uploaded
