@@ -737,10 +737,13 @@ export const updateComment = async (req, res, next) => {
   const groupId = req.body.groupId;
   const profileId = req.body.profileId;
   const description = req.body.description;
-  const deletedAssets = req.body.deletedAssets;
+  const deletedAssets = req.body.deletedAssets
+    ? JSON.parse(req.body.deletedAssets)
+    : undefined;
   const assets = req.files;
 
   try {
+    // return res.json({ 'aa': req.body });
     let from;
     req.path === "/group/updateComment"
       ? (from = "group")
@@ -807,6 +810,7 @@ export const updateComment = async (req, res, next) => {
     //check from asset user want delete is true syntex and found in db
     if (deletedAssets) {
       for (let i = 0; i < deletedAssets.length; i++) {
+        console.log(deletedAssets[i]);
         if (
           "public_id" in deletedAssets[i] &&
           "resource_type" in deletedAssets[i]
