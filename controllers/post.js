@@ -718,7 +718,7 @@ export const createComment = async (req, res, next) => {
     );
     !post ? createError(404, "did not find the post") : null;
     done = 1;
-    res.status(200).json({ message: "Your comment has been created" });
+    res.status(200).json({ message: "Your comment has been created", comment });
   } catch (error) {
     //if something happen delete assets you uploaded
     if (publicidAndLink && done === 0) {
