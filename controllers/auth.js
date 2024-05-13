@@ -123,7 +123,14 @@ export const signin = async (req, res, next) => {
     }
     const user = await User.findOne(
       { email: email },
-      { confirm: 1, password: 1, role: 1 }
+      {
+        confirm: 1,
+        password: 1,
+        role: 1,
+        firstName: 1,
+        lastName: 1,
+        profilePhotos: 1,
+      }
     );
     if (!user) {
       const error = new Error("Email not found");
@@ -158,6 +165,9 @@ export const signin = async (req, res, next) => {
       userId: user._id.toString(),
       role: user.role,
       experation: 24 * 60 * 60 * 1000 * 30,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      logo: user.profilePhotos[user.profilePhotos.length - 1],
     });
   } catch (error) {
     next(error);
@@ -287,7 +297,7 @@ export const resetPassword = async (req, res, next) => {
   }
 };
 export const newPassword = async (req, res, next) => {
- //a
+  //a
   const errors = validationResult(req);
   const token = req.body.token;
   const userId = req.body.userId;

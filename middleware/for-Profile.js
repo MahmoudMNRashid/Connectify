@@ -134,6 +134,9 @@ export const canSeeWithRole = async (req, res, next) => {
         blockedProfiles: 1,
         blockedPages: 1,
         blockedGroups: 1,
+        firstName: 1,
+        lastName: 1,
+        profilePhotos: 1,
       }
     );
 
@@ -155,6 +158,12 @@ export const canSeeWithRole = async (req, res, next) => {
     req.blockedProfiles = yourProfile.blockedProfiles;
     req.blockedPages = yourProfile.blockedPages;
     req.blockedGroups = yourProfile.blockedGroups;
+    req.fullName = {
+      firstName: yourProfile.firstName,
+      lastName: yourProfile.lastName,
+    };
+    req.logo = yourProfile.profilePhotos[yourProfile.profilePhotos.length - 1];
+
     next();
   } catch (error) {
     next(error);
