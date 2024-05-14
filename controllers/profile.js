@@ -1664,8 +1664,20 @@ export const getMainInformation = async (req, res, next) => {
           education: 1,
           phoneNumber: 1,
           placesLived: 1,
-          email: role === profileRoles.OWNER ? true : false,
-          canHeChangeName: role === profileRoles.OWNER ? true : false,
+          email: {
+            $cond: {
+              if: { $eq: ["$role", profileRoles.OWNER] },
+              then: "$email",
+              else: "$$REMOVE",
+            },
+          },
+          canHeChangeName: {
+            $cond: {
+              if: { $eq: ["$role", profileRoles.OWNER] },
+              then: "$canHeChangeName",
+              else: "$$REMOVE",
+            },
+          },
         },
       },
     ]);
@@ -1820,7 +1832,7 @@ export const getPagesIOwned = async (req, res, next) => {
 };
 export const getGroupsJoined = async (req, res, next) => {
   const profileId = req.params.profileId;
- 
+
   const ITEMS_PER_PAGE = 20;
   const page = +req.query.page || 1;
   const yourId = req.userId;
@@ -1836,7 +1848,7 @@ export const getGroupsJoined = async (req, res, next) => {
 
   try {
     const aggregationResult = await User.aggregate(
-      GroupsJoined(profileId, page, ITEMS_PER_PAGE, yourId,UniqueIds)
+      GroupsJoined(profileId, page, ITEMS_PER_PAGE, yourId, UniqueIds)
     );
 
     // const totalGroups = aggregationResult[0].totalCount;
