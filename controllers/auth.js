@@ -277,7 +277,7 @@ export const resetPassword = async (req, res, next) => {
 
     const resetPasswordToken = crypto.randomBytes(22).toString("hex");
     const resetPasswordTokenExpire = Date.now() + 3600000;
-    const confirmationLink = `http://localhost:5173/auth/reset-password/${resetPasswordToken}?userId=${user._id.toString()}`;
+    const confirmationLink = `https://connectify-react.vercel.app/auth/reset-password/${resetPasswordToken}?userId=${user._id.toString()}`;
     user.resetPasswordToken = resetPasswordToken;
     user.resetPasswordTokenExpire = resetPasswordTokenExpire;
     await user.save();
