@@ -1066,10 +1066,10 @@ export const unfriend = async (req, res, next) => {
     const friend = await User.findOneAndUpdate(
       {
         _id: idFriend,
-        friends: { $in: you._id },
+        friends: { $in: yourId },
       },
       {
-        $pull: { friends: you._id },
+        $pull: { friends: yourId },
       },
       {
         new: true,
