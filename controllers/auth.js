@@ -336,6 +336,7 @@ export const newPassword = async (req, res, next) => {
 };
 
 export const checkResetPassword = async (req, res, next) => {
+  console.log('first')
   const errors = validationResult(req);
   const token = req.body.token;
   const userId = req.body.userId;

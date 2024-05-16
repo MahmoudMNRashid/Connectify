@@ -875,6 +875,9 @@ export const sendFriendRequest = async (req, res, next) => {
   const reciverId = req.body.reciverId;
   const session = await mongoose.startSession();
   session.startTransaction();
+
+  yourId === reciverId ? createError(403, "Forbidden") : null;
+
   try {
     const reciver = await User.findOneAndUpdate(
       {
@@ -1647,6 +1650,32 @@ export const getMainInformation = async (req, res, next) => {
               },
             },
           },
+          areYouSendFriendRequestToHim: {
+            $cond: {
+              if: { $eq: [role, profileRoles.OWNER] },
+              then: false,
+              else: {
+                $cond: {
+                  if: { $in: [yourId, "$friendsRequestRecieve.from"] },
+                  then: true,
+                  else: false,
+                },
+              },
+            },
+          },
+          isHeSendFriendRequestToYou: {
+            $cond: {
+              if: { $eq: [role, profileRoles.OWNER] },
+              then: false,
+              else: {
+                $cond: {
+                  if: { $in: [yourId, "$friendsRequestSend.to"] },
+                  then: true,
+                  else: false,
+                },
+              },
+            },
+          },
         },
       },
       {
@@ -1678,6 +1707,8 @@ export const getMainInformation = async (req, res, next) => {
               else: "$$REMOVE",
             },
           },
+          areYouSendFriendRequestToHim: 1,
+          isHeSendFriendRequestToYou: 1,
         },
       },
     ]);
