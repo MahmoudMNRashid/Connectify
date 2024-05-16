@@ -1024,10 +1024,10 @@ export const cancelFriendRequestSentByMe = async (req, res, next) => {
     const reciver = await User.findOneAndUpdate(
       {
         _id: reciverId,
-        "friendsRequestRecieve.from": { $in: you._id },
+        "friendsRequestRecieve.from": { $in: yourId },
       },
       {
-        $pull: { friendsRequestRecieve: { from: you._id } },
+        $pull: { friendsRequestRecieve: { from: yourId } },
       },
       {
         new: true,
