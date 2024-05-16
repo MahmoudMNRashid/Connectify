@@ -936,11 +936,11 @@ export const acceptFriendRequest = async (req, res, next) => {
     const sender = await User.findOneAndUpdate(
       {
         _id: senderId,
-        "friendsRequestSend.to": { $in: you._id },
+        "friendsRequestSend.to": { $in: yourId },
       },
       {
-        $pull: { friendsRequestSend: { to: you._id } },
-        $push: { friends: you._id },
+        $pull: { friendsRequestSend: { to: yourId } },
+        $push: { friends: yourId },
       },
       {
         new: true,
@@ -983,10 +983,10 @@ export const cancelFriendRequestSentToMe = async (req, res, next) => {
     const sender = await User.findOneAndUpdate(
       {
         _id: senderId,
-        "friendsRequestSend.to": { $in: you._id },
+        "friendsRequestSend.to": { $in: yourId },
       },
       {
-        $pull: { friendsRequestSend: { to: you._id } },
+        $pull: { friendsRequestSend: { to: yourId } },
       },
       {
         new: true,
