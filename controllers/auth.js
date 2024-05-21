@@ -47,7 +47,7 @@ export const signup = async (req, res, next) => {
       lastName: req.body.lastName,
       email: req.body.email,
       password: hashedPassword,
-      gender: req.body.gender,
+      gender: req.body.gender==='male'?'Male':'Female',
       birthDay: req.body.birthDay,
       role: role[0],
       confirmationToken: confirmationToken,

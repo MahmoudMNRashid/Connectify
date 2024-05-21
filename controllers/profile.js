@@ -43,7 +43,7 @@ export const addProfilePhotoAndSet = async (req, res, next) => {
     //here you can upload photo to cloudinary and update database
 
     FilterPhotoTypeAndSize(photo);
-    var linkAndTypeForPhoto = [];
+    var linkAndTypeForPhoto = undefined;
     linkAndTypeForPhoto = await uploadAssets(
       photo,
       `profile/${yourId}/ProfilePhotos`
@@ -270,6 +270,7 @@ export const updateProfileBackgroundPhoto = async (req, res, next) => {
   const newPhoto = req.files;
   const yourId = req.userId;
 
+  console.log(req);
   try {
     if (!newPhoto || newPhoto.length > 1) {
       const error = new Error("Please upload one backgroundPhoto please ");
