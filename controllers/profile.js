@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { Mongoose } from "mongoose";
 import { validationResult } from "express-validator";
 
 import User from "../models/user.js";
@@ -817,9 +817,9 @@ export const addPhoneNumber = async (req, res, next) => {
 };
 export const updatePhoneNumber = async (req, res, next) => {
   const errors = validationResult(req);
-  const yourId = req.yourId;
+  const yourId = req.userId;
   const phoneNumber = req.body.phoneNumber;
-
+console.log(yourId)
   try {
     !errors.isEmpty()
       ? createError(422, "Validation failed", errors.array())
@@ -827,7 +827,7 @@ export const updatePhoneNumber = async (req, res, next) => {
 
     const user = await User.findOneAndUpdate(
       {
-        _id: yourId,
+        _id:yourId ,
         phoneNumber: { $exists: true },
       },
       {
@@ -837,7 +837,9 @@ export const updatePhoneNumber = async (req, res, next) => {
         new: true, //
         select: "_id", //
       }
+      
     );
+   
     !user ? createError(404, "There is no  previous phoneNumber") : null;
 
     res.status(200).json({ message: "Your phone number has been updated" });
