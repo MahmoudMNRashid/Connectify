@@ -441,20 +441,25 @@ export const addEducationCollege = async (req, res, next) => {
     !errors.isEmpty()
       ? createError(422, "Validation failed", errors.array())
       : null;
-    await User.updateOne(
+    const user = await User.findOneAndUpdate(
       {
         _id: yourId,
+        "education.college": { $size: 0 },
       },
       {
         $push: { "education.college": { name: collegeName, graduated } },
       },
       {
         new: true, //
-        select: "_id", //
+        select: "_id education.college", //
       }
     );
-
-    res.status(201).json({ message: "College has been added" });
+    console.log(user);
+    !user ? createError(400, "There is a previous college") : null;
+    res.status(201).json({
+      message: "College has been added",
+      collage: user.education.college[0],
+    });
   } catch (error) {
     next(error);
   }
@@ -507,20 +512,27 @@ export const addEducationHighSchool = async (req, res, next) => {
       ? createError(422, "Validation failed", errors.array())
       : null;
 
-    await User.updateOne(
+    const user = await User.findOneAndUpdate(
       {
         _id: yourId,
+        "education.highSchool": { $size: 0 },
       },
       {
         $push: { "education.highSchool": { name: highSchoolName, year: year } },
       },
       {
         new: true, //
-        select: "_id", //
+        select: "_id education.highSchool", //
       }
     );
-   
-    res.status(201).json({ message: "High school was added" });
+    !user ? createError(400, "There is a previous high school") : null;
+
+    res
+      .status(201)
+      .json({
+        message: "High school was added",
+        highSchool: user.education.highSchool[0],
+      });
   } catch (error) {
     next(error);
   }
@@ -853,7 +865,6 @@ export const deletePhoneNumber = async (req, res, next) => {
     const user = await User.findOneAndUpdate(
       {
         _id: yourId,
-    
       },
       {
         $unset: { phoneNumber: 1 },
