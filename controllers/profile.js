@@ -458,7 +458,7 @@ export const addEducationCollege = async (req, res, next) => {
     !user ? createError(400, "There is a previous college") : null;
     res.status(201).json({
       message: "College has been added",
-      collage: user.education.college[0],
+      college: user.education.college[0],
     });
   } catch (error) {
     next(error);
