@@ -5,7 +5,7 @@ import { createError } from "../util/helpers.js";
 export const isAuth = async (req, res, next) => {
   const authHeader = req.get("Authorization");
 
-  console.log(authHeader)
+  
   try {
     if (!authHeader) {
       createError(401, "Not authenticated");

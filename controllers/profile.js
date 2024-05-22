@@ -507,7 +507,7 @@ export const addEducationHighSchool = async (req, res, next) => {
       ? createError(422, "Validation failed", errors.array())
       : null;
 
-    await Page.updateOne(
+    await User.updateOne(
       {
         _id: yourId,
       },
@@ -519,7 +519,7 @@ export const addEducationHighSchool = async (req, res, next) => {
         select: "_id", //
       }
     );
-
+   
     res.status(201).json({ message: "High school was added" });
   } catch (error) {
     next(error);
