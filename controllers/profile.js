@@ -853,7 +853,7 @@ export const deletePhoneNumber = async (req, res, next) => {
     const user = await User.findOneAndUpdate(
       {
         _id: yourId,
-        phoneNumber: _idCollege,
+    
       },
       {
         $unset: { phoneNumber: 1 },
