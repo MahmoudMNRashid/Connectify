@@ -707,6 +707,7 @@ export const invitationsSentToMeFromGroups = (
                 name: "$group.name",
                 description: "$group.description",
                 cover: "$group.cover",
+                groupId: "$group._id",
               },
               inviteDate: "$sentInvitesFromGroups.inviteDate",
             },
