@@ -710,6 +710,7 @@ export const invitationsSentToMeFromGroups = (
                 groupId: "$group._id",
               },
               inviteDate: "$sentInvitesFromGroups.inviteDate",
+              idInvite:'$sentInvitesFromGroups._id'
             },
           },
         ],
