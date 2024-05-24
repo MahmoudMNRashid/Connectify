@@ -790,7 +790,7 @@ export const invitationsSentToMeFromPages = (
                 lastName: "$user.lastName",
                 logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               },
-              group: {
+              page: {
                 name: "$page.name",
                 logo: "$page.logo",
                 bio: "$page.bio",
