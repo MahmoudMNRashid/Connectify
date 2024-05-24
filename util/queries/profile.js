@@ -805,7 +805,7 @@ export const invitationsSentToMeFromPages = (
       $project: {
         sentInvitesFromPage: 1,
         totalCount: {
-          $arrayElemAt: ["$totalCount. sentInvitesFromPageCount", 0],
+          $arrayElemAt: ["$totalCount.sentInvitesFromPageCount", 0],
         },
       },
     },

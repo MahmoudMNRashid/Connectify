@@ -1940,7 +1940,7 @@ export const getInvitationsSentToMeFromPages = async (req, res, next) => {
     const aggregationResult = await User.aggregate(
       invitationsSentToMeFromPages(profileId, page, ITEMS_PER_PAGE)
     );
-
+console.log(aggregationResult)
     const totalsentInvitesFromPages = aggregationResult[0].totalCount;
 
     res.status(200).json({
