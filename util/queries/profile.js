@@ -794,7 +794,7 @@ export const invitationsSentToMeFromPages = (
                 name: "$page.name",
                 logo: "$page.logo",
                 bio: "$page.bio",
-                pageId:"page._id"
+                pageId:"$page._id"
               },
               inviteDate: "$sentInvitesFromPage.inviteDate",
               idInvite:'$sentInvitesFromPage._id'
