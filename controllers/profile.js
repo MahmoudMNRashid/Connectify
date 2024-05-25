@@ -1183,7 +1183,7 @@ export const sendRequestJoin = async (req, res, next) => {
         {
           $push: {
             members: {
-              userId: you._id,
+              userId: yourId,
               joiningDate: new Date(),
             },
           },
@@ -1214,7 +1214,7 @@ export const sendRequestJoin = async (req, res, next) => {
         {
           $push: {
             joiningRequests: {
-              userId: you._id,
+              userId: yourId,
               requestDate: new Date(),
             },
           },
