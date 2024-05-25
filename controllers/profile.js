@@ -1892,12 +1892,12 @@ export const getGroupsJoined = async (req, res, next) => {
     const aggregationResult = await User.aggregate(
       GroupsJoined(profileId, page, ITEMS_PER_PAGE, yourId, UniqueIds)
     );
-
-    // const totalGroups = aggregationResult[0].totalCount;
+console.log(aggregationResult)
+    const totalGroups = aggregationResult[0].totalCount;
 
     res.status(200).json({
       groups: aggregationResult[0].allGroups,
-      // extraInfo: information(totalGroups, page, ITEMS_PER_PAGE),
+      extraInfo: information(totalGroups, page, ITEMS_PER_PAGE),
     });
   } catch (error) {
     next(error);

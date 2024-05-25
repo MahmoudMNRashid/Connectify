@@ -505,7 +505,7 @@ export const GroupsJoined = (
     { $match: { _id: new mongoose.Types.ObjectId(profileId) } },
     {
       $facet: {
-        // totalCount: [{ $project: { GroupsCount: { $size: "$groups" } } }],
+        totalCount: [{ $project: { GroupsCount: { $size: "$groups" } } }],
         allGroups: [
           {
             $project: {
@@ -634,7 +634,7 @@ export const GroupsJoined = (
     {
       $project: {
         allGroups: 1,
-        // totalCount: { $arrayElemAt: ["$totalCount.GroupsCount", 0] },
+        totalCount: { $arrayElemAt: ["$totalCount.GroupsCount", 0] },
       },
     },
   ];
