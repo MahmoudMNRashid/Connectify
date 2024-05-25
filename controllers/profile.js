@@ -527,12 +527,10 @@ export const addEducationHighSchool = async (req, res, next) => {
     );
     !user ? createError(400, "There is a previous high school") : null;
 
-    res
-      .status(201)
-      .json({
-        message: "High school was added",
-        highSchool: user.education.highSchool[0],
-      });
+    res.status(201).json({
+      message: "High school was added",
+      highSchool: user.education.highSchool[0],
+    });
   } catch (error) {
     next(error);
   }
@@ -1136,11 +1134,11 @@ export const sendRequestJoin = async (req, res, next) => {
     const group = await Group.findOne(
       {
         _id: groupId,
-        membersBlocked: { $nin: you._id },
-        "members.userId": { $ne: you._id },
-        "admins.userId": { $ne: you._id },
-        moderator: { $ne: you._id },
-        "joiningRequests.userId": { $ne: you._id },
+        membersBlocked: { $nin: yourId },
+        "members.userId": { $ne: yourId },
+        "admins.userId": { $ne: yourId },
+        moderator: { $ne: yourId },
+        "joiningRequests.userId": { $ne: yourId },
         visibility:
           yourInvites.sentInvitesFromGroups.length === 0
             ? { $ne: visibility.HIDDEN }
@@ -1940,7 +1938,7 @@ export const getInvitationsSentToMeFromPages = async (req, res, next) => {
     const aggregationResult = await User.aggregate(
       invitationsSentToMeFromPages(profileId, page, ITEMS_PER_PAGE)
     );
-console.log(aggregationResult)
+    console.log(aggregationResult);
     const totalsentInvitesFromPages = aggregationResult[0].totalCount;
 
     res.status(200).json({
