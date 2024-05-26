@@ -1254,12 +1254,12 @@ export const cancelRequestJoin = async (req, res, next) => {
     const group = await Group.findOneAndUpdate(
       {
         _id: groupId,
-        "joiningRequests.userId": { $eq: you._id },
+        "joiningRequests.userId": { $eq: yourId },
       },
       {
         $pull: {
           joiningRequests: {
-            userId: you._id,
+            userId:yourId,
           },
         },
       },
@@ -1284,7 +1284,7 @@ export const cancelRequestJoin = async (req, res, next) => {
 
     await session.commitTransaction();
     session.endSession();
-    res.status(200).json({ message: "Joining request has been Canceled  " });
+    res.status(200).json({ message: "Joining request has been Canceled" });
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
