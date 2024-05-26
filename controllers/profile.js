@@ -1720,6 +1720,10 @@ export const getMainInformation = async (req, res, next) => {
           },
           areYouSendFriendRequestToHim: 1,
           isHeSendFriendRequestToYou: 1,
+          groupInvites: { $size: "$sentInvitesFromGroups" },
+          pageInvites: { $size: "$sentInvitesFromPage" },
+          friends: { $size: "$friends" },
+          incomingRequest: { $size: "$friendsRequestRecieve" },
         },
       },
     ]);
@@ -1892,7 +1896,7 @@ export const getGroupsJoined = async (req, res, next) => {
     const aggregationResult = await User.aggregate(
       GroupsJoined(profileId, page, ITEMS_PER_PAGE, yourId, UniqueIds)
     );
-console.log(aggregationResult)
+    console.log(aggregationResult);
     const totalGroups = aggregationResult[0].totalCount;
 
     res.status(200).json({
