@@ -346,6 +346,9 @@ export const posts = (
             },
           },
           {
+            $unwind: "$posts",
+          },
+          {
             $project: {
               _id: "$posts._id",
               userId: "$posts.userId",
