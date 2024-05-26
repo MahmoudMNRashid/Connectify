@@ -484,7 +484,7 @@ export const posts = (
                   else: false,
                 },
               },
-              canLikeOrComment: {
+              canCommentOrLike: {
                 $cond: {
                   if: { $eq: [role, groupRoles.NOT_Member] },
                   then: false,
