@@ -1600,7 +1600,11 @@ export const getModerator = async (req, res, next) => {
       group.moderator.userId = group.moderator._id;
       delete group.moderator._id;
     }
-    res.status(200).json({ ...group });
+    const moderator = {
+      ...group.moderator,
+      joiningDate: group.joiningDate,
+    };
+    res.status(200).json({ moderator });
   } catch (error) {
     next(error);
   }
