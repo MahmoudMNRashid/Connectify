@@ -886,7 +886,7 @@ export const reports = (groupId, yourId, page, ITEMS_PER_PAGE) => {
               },
               reportDate: "$filteredReports.reportDate",
               description: "$filteredReports.description",
-              reportId: "filteredReports._id",
+              reportId: "$filteredReports._id",
             },
           },
         ],
