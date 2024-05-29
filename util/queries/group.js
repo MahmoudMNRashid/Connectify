@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 import { groupRoles } from "../roles.js";
 import { WhoCanPostorApproveMemberRequest } from "../configGroup.js";
@@ -81,8 +80,14 @@ export const mainInformationForMembers = (
           ],
         },
         CanApproveMemberRequest:
-          "$whoCanApproveMemberRequest" === WhoCanPostorApproveMemberRequest.ANY_ONE_IN_GROUP ? true : false,
-        canPost: "$whoCanPost" === WhoCanPostorApproveMemberRequest.ANY_ONE_IN_GROUP? true : false,
+          "$whoCanApproveMemberRequest" ===
+          WhoCanPostorApproveMemberRequest.ANY_ONE_IN_GROUP
+            ? true
+            : false,
+        canPost:
+          "$whoCanPost" === WhoCanPostorApproveMemberRequest.ANY_ONE_IN_GROUP
+            ? true
+            : false,
       },
     },
     {
@@ -880,6 +885,7 @@ export const reports = (groupId, yourId, page, ITEMS_PER_PAGE) => {
                 },
               },
               reportDate: "$filteredReports.reportDate",
+              description: "$filteredReports.description",
             },
           },
         ],
