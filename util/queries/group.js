@@ -181,7 +181,7 @@ export const members = (groupId, page, ITEMS_PER_PAGE) => {
           {
             $project: {
               userId: "$user._id",
-              firsName: "$user.firstName",
+              firstName: "$user.firstName",
               lastName: "$user.lastName",
               logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               joiningDate: "$members.joiningDate",
@@ -236,7 +236,7 @@ export const admins = (groupId, page, ITEMS_PER_PAGE) => {
           {
             $project: {
               userId: "$user._id",
-              firsName: "$user.firstName",
+              firstName: "$user.firstName",
               lastName: "$user.lastName",
               logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               joiningDate: "$admins.joiningDate",

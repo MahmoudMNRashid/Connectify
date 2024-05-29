@@ -1579,16 +1579,28 @@ export const getModerator = async (req, res, next) => {
 
     const group = await Group.findById(groupId, {
       moderator: 1,
+      createdAt: 1, // Include the createdAt field
       _id: 0,
-    }).populate({
-      path: "moderator",
-      select: {
-        firstName: 1,
-        lastName: 1,
-        logo: { $arrayElemAt: ["$profilePhotos", -1] },
-      },
-    });
-    res.status(200).json({ moderator: group.moderator });
+    })
+      .populate({
+        path: "moderator",
+        select: {
+          firstName: 1,
+          lastName: 1,
+          logo: { $arrayElemAt: ["$profilePhotos", -1] },
+        },
+      })
+      .lean(); // Use lean() to return a plain JavaScript object instead of a Mongoose document
+
+    if (group) {
+      group.joiningDate = group.createdAt; // Rename createdAt to joiningDate
+      delete group.createdAt; // Remove the original createdAt field if desired
+    } // Rename _id to userId for moderator
+    if (group.moderator && group.moderator._id) {
+      group.moderator.userId = group.moderator._id;
+      delete group.moderator._id;
+    }
+    res.status(200).json({ ...group });
   } catch (error) {
     next(error);
   }
