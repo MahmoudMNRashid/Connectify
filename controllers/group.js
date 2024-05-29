@@ -1755,7 +1755,7 @@ export const getReports = async (req, res, next) => {
   const groupId = req.params.groupId;
   const role = req.role;
   const yourId = req.userId;
-  const ITEMS_PER_PAGE = 2;
+  const ITEMS_PER_PAGE = 20;
   const page = +req.query.page || 1;
 
   try {
