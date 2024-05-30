@@ -815,19 +815,19 @@ export const blockMemberOrAdmin = async (req, res, next) => {
   const groupId = req.body.groupId;
   const userRole = req.role;
   const yourId = req.userId;
-
+  console.log(keepPosts);
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
     //check validation
     if (keepPosts !== 0 && keepPosts !== 1) {
-      createError("Keep posts should be 0 or 1");
+      createError(422, "Keep posts should be 0 or 1");
     }
-    //maybe enter your id
+    // Prevent blocking self
     if (yourId.toString() === memberId) {
       createError(403, "You can not block your self");
     }
-    //get some info
+    // Retrieve group information
     const group = await Group.aggregate([
       {
         $match: {
@@ -868,7 +868,7 @@ export const blockMemberOrAdmin = async (req, res, next) => {
       ? createError(404, "There no member with this ID")
       : null;
 
-    //admin block admin-->forbidden
+    // Prevent admin blocking another admin
     if (group[0].admins.length > 0 && userRole === groupRoles.ADMIN) {
       createError(403, "You can not block admin - Forbidden");
     }
@@ -930,40 +930,79 @@ export const blockMemberOrAdmin = async (req, res, next) => {
     }
     let done = 0;
     //update db
-    if (group[0].admins.length > 0) {
-      await Group.updateOne(
-        { _id: groupId },
-        {
-          $pull: {
-            admins: { userId: memberId },
-            reports: { idOfOwnerPost: memberId },
-            reportsFromAdmin: { idOfOwnerPost: memberId },
-            posts: { $in: ids },
-          },
 
-          $push: { membersBlocked: memberId },
-        },
-        {
-          session,
-        }
-      );
+    if (keepPosts === 0) {
+      if (group[0].admins.length > 0) {
+        await Group.updateOne(
+          { _id: groupId },
+          {
+            $pull: {
+              admins: { userId: memberId },
+              reports: { idOfOwnerPost: memberId },
+              reportsFromAdmin: { idOfOwnerPost: memberId },
+              posts: { $in: ids },
+            },
+
+            $push: { membersBlocked: memberId },
+          },
+          {
+            session,
+          }
+        );
+      } else {
+        await Group.updateOne(
+          { _id: groupId },
+          {
+            $pull: {
+              members: { userId: new mongoose.Types.ObjectId(memberId) },
+              reports: { idOfOwnerPost: new mongoose.Types.ObjectId(memberId) },
+              posts: { $in: ids },
+              requestPosts: { postId: { $in: ids } },
+            },
+
+            $push: { membersBlocked: new mongoose.Types.ObjectId(memberId) },
+          },
+          {
+            session,
+          }
+        );
+      }
     } else {
-      await Group.updateOne(
-        {
-          $pull: {
-            members: { userId: new mongoose.Types.ObjectId(memberId) },
-            reports: { idOfOwnerPost: new mongoose.Types.ObjectId(memberId) },
-            posts: { $in: ids },
-            requestPosts: { postId: _idPost },
-          },
+      if (group[0].admins.length > 0) {
+        await Group.updateOne(
+          { _id: groupId },
+          {
+            $pull: {
+              admins: { userId: memberId },
+              reports: { idOfOwnerPost: memberId },
+              reportsFromAdmin: { idOfOwnerPost: memberId },
+            },
 
-          $push: { membersBlocked: new mongoose.Types.ObjectId(memberId) },
-        },
-        {
-          session,
-        }
-      );
+            $push: { membersBlocked: memberId },
+          },
+          {
+            session,
+          }
+        );
+      } else {
+        console.log("first");
+        await Group.updateOne(
+          { _id: groupId },
+          {
+            $pull: {
+              members: { userId: new mongoose.Types.ObjectId(memberId) },
+              reports: { idOfOwnerPost: new mongoose.Types.ObjectId(memberId) },
+            },
+
+            $push: { membersBlocked: new mongoose.Types.ObjectId(memberId) },
+          },
+          {
+            session,
+          }
+        );
+      }
     }
+
     //update user document
     await User.updateOne(
       { _id: memberId },
@@ -971,9 +1010,7 @@ export const blockMemberOrAdmin = async (req, res, next) => {
         $pull: { groups: group[0]._id },
         $push: { blockedGroups: group[0]._id },
       },
-      {
-        session,
-      }
+      { session }
     );
     //delete posts
     if (keepPosts === 0) {
