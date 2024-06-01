@@ -19,6 +19,7 @@ import {
   mainInformationForMembers,
   mainInformationForNotMembers,
   members,
+  membersBlocked,
   posts,
   reports,
   reportsFromAdmin,
@@ -1851,23 +1852,16 @@ export const getMembersBlocked = async (req, res, next) => {
     role === groupRoles.NOT_Member || role === groupRoles.MEMBER
       ? createError(403, "Forbidden")
       : null;
-    const group = await Group.findById(groupId)
-      .select({ membersBlocked: 1 })
-      .populate({
-        path: "membersBlocked",
-        select: {
-          _id: 1,
-          firstName: 1,
-          lastName: 1,
-          logo: { $arrayElemAt: ["$profilePhotos", -1] },
-        },
-        options: {
-          skip: (page - 1) * ITEMS_PER_PAGE,
-          limit: ITEMS_PER_PAGE,
-        },
-      });
+    const aggregationResult = await Group.aggregate(
+      membersBlocked(groupId, page, ITEMS_PER_PAGE)
+    );
 
-    res.status(200).json({ members: group.membersBlocked });
+    const totalMembersBlocked = aggregationResult[0].totalCount;
+
+    res.status(200).json({
+      membersBlocked: aggregationResult[0].membersBlocked,
+      extraInfo: information(totalMembersBlocked, page, ITEMS_PER_PAGE),
+    });
   } catch (error) {
     next(error);
   }

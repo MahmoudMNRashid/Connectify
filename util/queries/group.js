@@ -258,6 +258,59 @@ export const admins = (groupId, page, ITEMS_PER_PAGE) => {
     },
   ];
 };
+export const membersBlocked = (groupId, page, ITEMS_PER_PAGE) => {
+  return [
+    { $match: { _id: new mongoose.Types.ObjectId(groupId) } },
+    {
+      $facet: {
+        totalCount: [
+          { $project: { membersBlockedCount: { $size: "$membersBlocked" } } },
+        ],
+        membersBlocked: [
+          {
+            $project: {
+              _id: 0,
+              membersBlocked: 1,
+            },
+          },
+          { $unwind: "$membersBlocked" },
+          {
+            $lookup: {
+              from: "users",
+              localField: "membersBlocked",
+              foreignField: "_id",
+              as: "user",
+            },
+          },
+
+          {
+            $skip: (page - 1) * ITEMS_PER_PAGE,
+          },
+          {
+            $limit: ITEMS_PER_PAGE,
+          },
+          {
+            $unwind: "$user",
+          },
+          {
+            $project: {
+              userId: "$user._id",
+              firstName: "$user.firstName",
+              lastName: "$user.lastName",
+              logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        membersBlocked: 1,
+        totalCount: { $arrayElemAt: ["$totalCount.membersBlockedCount", 0] },
+      },
+    },
+  ];
+};
 
 export const posts = (
   groupId,
