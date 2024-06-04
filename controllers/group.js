@@ -1753,7 +1753,7 @@ export const getYourRequestPosts = async (req, res, next) => {
     const totalRequestPosts = aggregationResult[0].totalCount;
 
     res.status(200).json({
-      requestPosts: aggregationResult[0].requestPosts,
+      YourRequestPosts: aggregationResult[0].requestPosts,
       extraInfo: information(totalRequestPosts, page, ITEMS_PER_PAGE),
     });
   } catch (error) {
