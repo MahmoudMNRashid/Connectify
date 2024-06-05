@@ -131,6 +131,8 @@ export const mainInformationForAdminsAndModerator = (groupId, role) => {
         privacy: 1,
         visibility: 1,
         immediatePost: 1,
+        whoCanApproveMemberRequest: 1,
+        whoCanPost: 1,
         description: 1,
         cover: 1,
         role: 1,
