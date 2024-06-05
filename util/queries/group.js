@@ -1038,6 +1038,8 @@ export const reportsFromAdmin = (groupId, page, ITEMS_PER_PAGE) => {
                 },
               },
               reportDate: "$reportsFromAdmin.reportDate",
+              description: "$reportsFromAdmin.description",
+              reportId: "$reportsFromAdmin._id",
             },
           },
         ],
