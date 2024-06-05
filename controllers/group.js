@@ -757,7 +757,7 @@ export const reportPost = async (req, res, next) => {
 
 export const deleteReportPostFromAdmin = async (req, res, next) => {
   const _idReport = req.body._id;
-  const groupId = req.body.group._id;
+  const groupId = req.body.groupId;
 
   try {
     const group = await Group.findOneAndUpdate(
