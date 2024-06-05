@@ -1833,7 +1833,7 @@ export const getReportsFromAdmin = async (req, res, next) => {
     const totalReports = aggregationResult[0].totalCount;
 
     res.status(200).json({
-      reports: aggregationResult[0].reports,
+      adminReports: aggregationResult[0].reports,
       extraInfo: information(totalReports, page, ITEMS_PER_PAGE),
     });
   } catch (error) {
