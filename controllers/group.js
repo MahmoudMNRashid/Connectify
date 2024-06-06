@@ -203,7 +203,7 @@ export const updateDescription = async (req, res, next) => {
     !errors.isEmpty()
       ? createError(422, "Description should not be empty")
       : null;
-    const group = await Page.findOneAndUpdate(
+    const group = await Group.findOneAndUpdate(
       {
         _id: groupId,
         description: { $exists: true },
