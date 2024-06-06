@@ -30,6 +30,7 @@ import { information } from "../util/queries/pagination.js";
 import {
   WhoCanPostorApproveMemberRequest,
   privacy as privacyGroup,
+  visibility,
 } from "../util/configGroup.js";
 import { groupRoles } from "../util/roles.js";
 
@@ -303,7 +304,7 @@ export const changePrivacy = async (req, res, next) => {
         _id: groupId,
         privacy: { $ne: privacy },
       },
-      { visibility: 1, privacy: 1 }
+      { privacy: 1, visibility: 1 }
     );
 
     //check if privacy equal to privacy which send
