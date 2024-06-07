@@ -1055,3 +1055,42 @@ export const reportsFromAdmin = (groupId, page, ITEMS_PER_PAGE) => {
     },
   ];
 };
+
+export const friendsWhoDidNotJoinAggregation = (
+  yourId,
+  groupId,
+  page,
+  ITEMS_PER_PAGE
+) => {
+  return [
+    {
+      $match: {
+        friends: { $in: [new mongoose.Types.ObjectId(yourId)] },
+        groups: { $nin: [new mongoose.Types.ObjectId(groupId)] },
+      },
+    },
+    {
+      $facet: {
+        totalCount: [{ $count: "totalCount" }],
+        friends: [
+          {
+            $project: {
+              _id: 1,
+              firstName: 1,
+              lastName: 1,
+              logo: { $arrayElemAt: ["$profilePhotos", -1] },
+            },
+          },
+          { $skip: (page - 1) * ITEMS_PER_PAGE },
+          { $limit: ITEMS_PER_PAGE },
+        ],
+      },
+    },
+    {
+      $project: {
+        friends: 1,
+        totalCount: { $arrayElemAt: ["$totalCount.totalCount", 0] },
+      },
+    },
+  ];
+};

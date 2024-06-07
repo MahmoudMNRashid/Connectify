@@ -14,6 +14,7 @@ import { createError } from "../util/helpers.js";
 
 import {
   admins,
+  friendsWhoDidNotJoinAggregation,
   joiningRequest,
   mainInformationForAdminsAndModerator,
   mainInformationForMembers,
@@ -1872,28 +1873,24 @@ export const getYourFriendsWhoDidNotJoin = async (req, res, next) => {
   const groupId = req.params.groupId;
   const role = req.role;
   const yourId = req.userId;
-  const ITEMS_PER_PAGE = 1;
+  const ITEMS_PER_PAGE = 20;
   const page = +req.query.page || 1;
 
   try {
-    role === groupRoles.NOT_Member ? createError(403, "Forbidden") : null;
+    if (role === groupRoles.NOT_Member) {
+      return next(createError(403, "Forbidden"));
+    }
 
-    const result = await User.find(
-      {
-        friends: { $in: yourId },
-        groups: { $nin: groupId },
-      },
-      {
-        _id: 1,
-        firstName: 1,
-        lastName: 1,
-        logo: { $arrayElemAt: ["$profilePhotos", -1] },
-      }
-    )
-      .skip((page - 1) * ITEMS_PER_PAGE)
-      .limit(ITEMS_PER_PAGE);
+    const aggregationResult = await User.aggregate(
+      friendsWhoDidNotJoinAggregation(yourId, groupId, page, ITEMS_PER_PAGE)
+    );
 
-    res.json(result);
+    const totalFriends = aggregationResult[0]?.totalCount || 0;
+
+    res.status(200).json({
+      friendsNotJoin: aggregationResult[0]?.friends || [],
+      extraInfo: information(totalFriends, page, ITEMS_PER_PAGE),
+    });
   } catch (error) {
     next(error);
   }
