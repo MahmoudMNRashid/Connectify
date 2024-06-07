@@ -1075,7 +1075,8 @@ export const friendsWhoDidNotJoinAggregation = (
         friends: [
           {
             $project: {
-              _id: 1,
+              _id: 0,
+              userId: "$_id",
               firstName: 1,
               lastName: 1,
               logo: { $arrayElemAt: ["$profilePhotos", -1] },
