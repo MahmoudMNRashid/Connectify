@@ -1491,15 +1491,30 @@ export const getModerator = async (req, res, next) => {
     const page = await Page.findById(pageId, {
       owner: 1,
       _id: 0,
-    }).populate({
-      path: "owner",
-      select: {
-        firstName: 1,
-        lastName: 1,
-        logo: { $arrayElemAt: ["$profilePhotos", -1] },
-      },
-    });
-    res.status(200).json({ moderator: page.owner });
+      createdAt: 1,
+    })
+      .populate({
+        path: "owner",
+        select: {
+          firstName: 1,
+          lastName: 1,
+          logo: { $arrayElemAt: ["$profilePhotos", -1] },
+        },
+      })
+      .lean();
+    if (page) {
+      page.date = page.createdAt;
+      delete page.createdAt;
+    }
+    if (page.owner && page.owner._id) {
+      page.owner.userId = page.owner._id;
+      delete page.owner._id;
+    }
+    const moderator = {
+      ...page.owner,
+      date: page.date,
+    };
+    res.status(200).json({ moderator });
   } catch (error) {
     next(error);
   }
