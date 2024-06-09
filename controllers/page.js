@@ -821,14 +821,175 @@ export const deleteEmail = async (req, res, next) => {
         select: "_id", //
       }
     );
-    !page
-      ? createError(404, "There is no  previous phone number to delete it")
-      : null;
+    !page ? createError(404, "There is no  previous email to delete it") : null;
     res.status(200).json({ message: "Your email has been deleted" });
   } catch (error) {
     next(error);
   }
 };
+export const addGender = async (req, res, next) => {
+  const errors = validationResult(req);
+
+  const gender = req.body.gender;
+  const pageId = req.body.pageId;
+  try {
+    if (!errors.isEmpty()) {
+      createError(422, "Validationfailed", errors.array());
+    }
+    const page = await Page.findOneAndUpdate(
+      {
+        _id: pageId,
+        gender: { $exists: false },
+      },
+      {
+        gender: gender,
+      },
+      {
+        new: true, //
+        select: "_id", //
+      }
+    );
+    !page ? createError(400, "There is already gender ") : null;
+    res.status(201).json({ message: "Your gender has been added" });
+  } catch (error) {
+    next(error);
+  }
+};
+export const updateGender = async (req, res, next) => {
+  const errors = validationResult(req);
+  const pageId = req.body.pageId;
+  const gender = req.body.gender;
+
+  try {
+    if (!errors.isEmpty()) {
+      createError(422, "Validation failed", errors.array());
+    }
+    const page = await Page.findOneAndUpdate(
+      {
+        _id: pageId,
+        gender: { $exists: true },
+      },
+      {
+        gender: gender,
+      },
+      {
+        new: true, //
+        select: "_id", //
+      }
+    );
+    !page ? createError(404, "There is no gender") : null;
+    res.status(200).json({ message: "Your gender has been updated" });
+  } catch (error) {
+    next(error);
+  }
+};
+export const deleteGender = async (req, res, next) => {
+  const pageId = req.body.pageId;
+
+  try {
+    const page = await Page.findOneAndUpdate(
+      {
+        _id: pageId,
+        gender: { $exists: true },
+      },
+      {
+        $unset: { gender: 1 },
+      },
+      {
+        new: true, //
+        select: "_id", //
+      }
+    );
+    !page
+      ? createError(404, "There is no  previous gender to delete it")
+      : null;
+    res.status(200).json({ message: "Your gender has been deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+export const addBirthday = async (req, res, next) => {
+  const errors = validationResult(req);
+
+  const birthday = req.body.birthday;
+  const pageId = req.body.pageId;
+  try {
+    if (!errors.isEmpty()) {
+      createError(422, "Validation failed", errors.array());
+    }
+    const page = await Page.findOneAndUpdate(
+      {
+        _id: pageId,
+        birthday: { $exists: false },
+      },
+      {
+        birthday: birthday,
+      },
+      {
+        new: true, //
+        select: "_id", //
+      }
+    );
+    !page ? createError(400, "There is already birthday ") : null;
+    res.status(201).json({ message: "Your birthday has been added" });
+  } catch (error) {
+    next(error);
+  }
+};
+export const updateBirthday = async (req, res, next) => {
+  const errors = validationResult(req);
+  const pageId = req.body.pageId;
+  const birthday = req.body.birthday;
+
+  try {
+    if (!errors.isEmpty()) {
+      createError(422, "Validation  failed", errors.array());
+    }
+    const page = await Page.findOneAndUpdate(
+      {
+        _id: pageId,
+        birthday: { $exists: true },
+      },
+      {
+        birthday: birthday,
+      },
+      {
+        new: true, //
+        select: "_id", //
+      }
+    );
+    !page ? createError(404, "There is no birthday") : null;
+    res.status(200).json({ message: "Your birthday has been updated" });
+  } catch (error) {
+    next(error);
+  }
+};
+export const deleteBirthday = async (req, res, next) => {
+  const pageId = req.body.pageId;
+
+  try {
+    const page = await Page.findOneAndUpdate(
+      {
+        _id: pageId,
+        birthday: { $exists: true },
+      },
+      {
+        $unset: { birthday: 1 },
+      },
+      {
+        new: true, //
+        select: "_id", //
+      }
+    );
+    !page
+      ? createError(404, "There is no  previous birthday to delete it")
+      : null;
+    res.status(200).json({ message: "Your birthday has been deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const blockUser = async (req, res, next) => {
   const pageId = req.body.pageId;
   const userId = req.body.userId;

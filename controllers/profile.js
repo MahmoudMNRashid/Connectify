@@ -1259,7 +1259,7 @@ export const cancelRequestJoin = async (req, res, next) => {
       {
         $pull: {
           joiningRequests: {
-            userId:yourId,
+            userId: yourId,
           },
         },
       },

@@ -43,15 +43,21 @@ import {
   getMainInformations as getMainInformationsController,
   getFollowers as getFollowersController,
   getModerator as getModeratorController,
-  getUsersBlocked as getUsersBlockedController ,
+  getUsersBlocked as getUsersBlockedController,
   getPosts as getPostsController,
   getYourFriendsWhoDidNotLike as getYourFriendsWhoDidNotLikeController,
-  getRates as getRatesController
+  getRates as getRatesController,
+  addGender as addGenderController,
+  updateGender as updateGenderController,
+  deleteGender as deleteGenderController,
+  addBirthday as addBirthdayController,
+  updateBirthday as updateBirthdayController,
+  deleteBirthday as deleteBirthdayController,
 } from "../controllers/page.js";
 import { pageCategories } from "../util/helpers.js";
 
 const router = express.Router();
-
+const validGenders = ["male", "female"];
 //create page
 router.post(
   "/createPage",
@@ -255,6 +261,84 @@ router.delete(
   isOwner,
   deletePhoneNumberController
 );
+//add gender
+router.post(
+  "/addGender",
+  isAuth,
+  isOwner,
+  body(
+    "gender",
+    `Gender is required,Valid options are: ${validGenders.join(", ")}`
+  )
+    .notEmpty()
+    .isIn(validGenders),
+  addGenderController
+);
+//update gender
+router.post(
+  "/updateGender",
+  isAuth,
+  isOwner,
+  body(
+    "gender",
+    `Gender is required,Valid options are: ${validGenders.join(", ")}`
+  )
+    .notEmpty()
+    .isIn(validGenders),
+  updateGenderController
+);
+//delete gender
+router.delete("/deleteGender", isAuth, isOwner, deleteGenderController);
+//add birthday
+router.post(
+  "/updateBirthday",
+  isAuth,
+  isOwner,
+  body("birthday", "Invalid date format for birthday")
+    .isDate()
+    .custom((value, { req }) => {
+      const birthday = new Date(value);
+      const currentDate = new Date();
+
+      // Calculate age
+      const age = Math.floor(
+        (currentDate - birthday) / (365.25 * 24 * 60 * 60 * 1000)
+      );
+
+      // Check if age is 8 or older
+      if (age < 8) {
+        throw "Must be at least 8 years old";
+      }
+      return true;
+    }),
+  addBirthdayController
+);
+//update birthday
+router.post(
+  "/updateBirthday",
+  isAuth,
+  isOwner,
+  body("birthday", "Invalid date format for birthday")
+    .isDate()
+    .custom((value, { req }) => {
+      const birthday = new Date(value);
+      const currentDate = new Date();
+
+      // Calculate age
+      const age = Math.floor(
+        (currentDate - birthday) / (365.25 * 24 * 60 * 60 * 1000)
+      );
+
+      // Check if age is 8 or older
+      if (age < 8) {
+        throw "Must be at least 8 years old";
+      }
+      return true;
+    }),
+  updateBirthdayController
+);
+//delete birthday
+router.delete("/deleteBirthday", isAuth, isOwner, deleteBirthdayController);
 //add email
 router.post(
   "/addEmail",
