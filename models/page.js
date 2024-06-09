@@ -30,7 +30,6 @@ const pageSchema = new Schema(
     placesLived: {
       homeTown: String,
       currentCity: String,
-  
     },
     email: String,
     usersLiked: [{ type: Schema.Types.ObjectId, ref: "User" }],

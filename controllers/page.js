@@ -716,7 +716,7 @@ export const deletePhoneNumber = async (req, res, next) => {
     const page = await Page.findOneAndUpdate(
       {
         _id: pageId,
-        phoneNumber: { $exists: true },
+        // phoneNumber: { $exists: true },
       },
       {
         $unset: { phoneNumber: 1 },
@@ -729,6 +729,7 @@ export const deletePhoneNumber = async (req, res, next) => {
     !page
       ? createError(404, "There is no  previous phone number to delete it")
       : null;
+
     res.status(200).json({ message: "Your phone number has been deleted" });
   } catch (error) {
     next(error);
