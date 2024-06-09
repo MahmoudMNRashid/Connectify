@@ -1515,7 +1515,7 @@ export const getUsersBlocked = async (req, res, next) => {
     const totalMembers = aggregationResult[0].totalCount;
 
     res.status(200).json({
-      followers: aggregationResult[0].allMembers,
+      blockedUsers: aggregationResult[0].allMembers,
       extraInfo: information(totalMembers, page, ITEMS_PER_PAGE),
     });
   } catch (error) {
