@@ -321,20 +321,26 @@ export const addEducation_College = async (req, res, next) => {
     if (!errors.isEmpty()) {
       createError(422, "Validation failed", errors.array());
     }
-    await Page.updateOne(
+
+    const page = await Page.findOneAndUpdate(
       {
         _id: pageId,
+        "education.college": { $size: 0 },
       },
       {
         $push: { "education.college": { name: collegeName, graduated } },
       },
       {
         new: true, //
-        select: "_id", //
+        select: "_id education.college", //
       }
     );
+    !page ? createError(400, "There is a previous college") : null;
 
-    res.status(201).json({ message: "College has been added" });
+    res.status(201).json({
+      message: "College has been added",
+      college: page.education.college[0],
+    });
   } catch (error) {
     next(error);
   }
@@ -412,19 +418,25 @@ export const addEducation_HighSchool = async (req, res, next) => {
       createError(422, "Validation failed", errors.array());
     }
 
-    await Page.updateOne(
+    const page = await Page.findOneAndUpdate(
       {
         _id: pageId,
+        "education.highSchool": { $size: 0 },
       },
       {
         $push: { "education.highSchool": { name: highSchoolName, year: year } },
       },
       {
         new: true, //
-        select: "_id", //
+        select: "_id education.highSchool", //
       }
     );
-    res.status(201).json({ message: "High school has been added" });
+    !page ? createError(400, "There is a previous high school") : null;
+
+    res.status(201).json({
+      message: "High school was added",
+      highSchool: page.education.highSchool[0],
+    });
   } catch (error) {
     next(error);
   }
@@ -622,6 +634,7 @@ export const updateHometown = async (req, res, next) => {
         select: "_id", //
       }
     );
+
     !page ? createError(404, "There is no  homeTown") : null;
     res.status(200).json({ message: "Your hometown was updated" });
   } catch (error) {
