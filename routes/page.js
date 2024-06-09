@@ -291,7 +291,7 @@ router.post(
 router.delete("/deleteGender", isAuth, isOwner, deleteGenderController);
 //add birthday
 router.post(
-  "/updateBirthday",
+  "/addBirthday",
   isAuth,
   isOwner,
   body("birthday", "Invalid date format for birthday")
