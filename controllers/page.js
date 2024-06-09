@@ -920,10 +920,10 @@ export const addBirthday = async (req, res, next) => {
     const page = await Page.findOneAndUpdate(
       {
         _id: pageId,
-        birthday: { $exists: false },
+        birthDay: { $exists: false },
       },
       {
-        birthday: birthday,
+        birthDay: birthday,
       },
       {
         new: true, //
@@ -948,10 +948,10 @@ export const updateBirthday = async (req, res, next) => {
     const page = await Page.findOneAndUpdate(
       {
         _id: pageId,
-        birthday: { $exists: true },
+        birthDay: { $exists: true },
       },
       {
-        birthday: birthday,
+        birthDay: birthday,
       },
       {
         new: true, //
@@ -971,10 +971,10 @@ export const deleteBirthday = async (req, res, next) => {
     const page = await Page.findOneAndUpdate(
       {
         _id: pageId,
-        birthday: { $exists: true },
+        birthDay: { $exists: true },
       },
       {
-        $unset: { birthday: 1 },
+        $unset: { birthDay: 1 },
       },
       {
         new: true, //
@@ -1629,6 +1629,8 @@ export const getMainInformations = async (req, res, next) => {
           phoneNumber: 1,
           placesLived: 1,
           email: 1,
+          gender: 1,
+          birthDay: 1,
         },
       },
     ]);

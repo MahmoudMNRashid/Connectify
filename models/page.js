@@ -31,7 +31,7 @@ const pageSchema = new Schema(
       homeTown: String,
       currentCity: String,
     },
-    birthday: { type: String, required: true }, //
+    birthDay: { type: String, required: true }, //
     gender: { type: String, required: true },
     email: String,
     usersLiked: [{ type: Schema.Types.ObjectId, ref: "User" }],
