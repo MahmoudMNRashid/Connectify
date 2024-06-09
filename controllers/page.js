@@ -15,7 +15,6 @@ import { followers, posts, rates, usersBlocked } from "../util/queries/page.js";
 import { information } from "../util/queries/pagination.js";
 import { pageRoles } from "../util/roles.js";
 
-
 export const createPage = async (req, res, next) => {
   const yourId = req.userId;
   const name = req.body.name;
@@ -1291,7 +1290,7 @@ export const unlikeInPage = async (req, res, next) => {
         usersLiked: { $in: yourId },
       },
       {
-        $pull: { usersLiked: you._id },
+        $pull: { usersLiked: yourId },
       },
       { new: true, select: "_id", session }
     );
@@ -1525,7 +1524,6 @@ export const getUsersBlocked = async (req, res, next) => {
 };
 
 export const getPosts = async (req, res, next) => {
-  
   const pageId = req.params.pageId;
   const role = req.role;
   const ITEMS_PER_PAGE = 20;
