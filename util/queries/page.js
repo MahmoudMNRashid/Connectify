@@ -1,7 +1,6 @@
-
 import mongoose from "mongoose";
 import { pageRoles } from "../roles.js";
-import { whoCanComment_Page,whoCanSee_Page } from "../configPage.js";
+import { whoCanComment_Page, whoCanSee_Page } from "../configPage.js";
 
 export const followers = (pageId, page, ITEMS_PER_PAGE) => {
   return [
@@ -131,7 +130,7 @@ export const posts = (pageId, yourId, role, page, ITEMS_PER_PAGE) => {
                     $filter: {
                       input: ["$$ROOT.who"],
                       as: "post",
-                      cond: { $eq: ["$$post",  whoCanSee_Page.PUBLIC] },
+                      cond: { $eq: ["$$post", whoCanSee_Page.PUBLIC] },
                     },
                   },
                   else: ["$$ROOT.who"],
@@ -158,7 +157,7 @@ export const posts = (pageId, yourId, role, page, ITEMS_PER_PAGE) => {
                       input: ["$$ROOT"],
                       as: "post",
                       cond: {
-                        $eq: ["$$post.whoCanSee",  whoCanSee_Page.PUBLIC],
+                        $eq: ["$$post.whoCanSee", whoCanSee_Page.PUBLIC],
                       },
                     },
                   },
@@ -190,7 +189,12 @@ export const posts = (pageId, yourId, role, page, ITEMS_PER_PAGE) => {
                 $cond: {
                   if: {
                     $and: [
-                      { $eq: [whoCanComment_Page.FOLLOWERS, "$posts.whoCanComment"] },
+                      {
+                        $eq: [
+                          whoCanComment_Page.FOLLOWERS,
+                          "$posts.whoCanComment",
+                        ],
+                      },
                       { $eq: [role, pageRoles.NOT_FOLLOWERS] },
                     ],
                   },
@@ -383,6 +387,40 @@ export const rates = (pageId, yourId, page, ITEMS_PER_PAGE) => {
         avgRate: 1,
         ratings: 1,
         totalCount: { $arrayElemAt: ["$totalCount.ratingCount", 0] },
+      },
+    },
+  ];
+};
+export const friendsWhoDidNotJoin = (yourId, pageId, page, ITEMS_PER_PAGE) => {
+  return [
+    {
+      $match: {
+        friends: { $in: [new mongoose.Types.ObjectId(yourId)] },
+        likedPages: { $nin: [new mongoose.Types.ObjectId(pageId)] },
+      },
+    },
+    {
+      $facet: {
+        totalCount: [{ $count: "totalCount" }],
+        friends: [
+          {
+            $project: {
+              _id: 0,
+              userId: "$_id",
+              firstName: 1,
+              lastName: 1,
+              logo: { $arrayElemAt: ["$profilePhotos", -1] },
+            },
+          },
+          { $skip: (page - 1) * ITEMS_PER_PAGE },
+          { $limit: ITEMS_PER_PAGE },
+        ],
+      },
+    },
+    {
+      $project: {
+        friends: 1,
+        totalCount: { $arrayElemAt: ["$totalCount.totalCount", 0] },
       },
     },
   ];

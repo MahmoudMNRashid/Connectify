@@ -11,7 +11,13 @@ import {
   fileFilterPhotosAndVideos,
   uploadAssets,
 } from "../util/file.js";
-import { followers, posts, rates, usersBlocked } from "../util/queries/page.js";
+import {
+  followers,
+  friendsWhoDidNotJoin,
+  posts,
+  rates,
+  usersBlocked,
+} from "../util/queries/page.js";
 import { information } from "../util/queries/pagination.js";
 import { pageRoles } from "../util/roles.js";
 
@@ -1574,28 +1580,22 @@ export const getYourFriendsWhoDidNotLike = async (req, res, next) => {
   const pageId = req.params.pageId;
   const role = req.role;
   const yourId = req.userId;
-  const ITEMS_PER_PAGE = 1;
+  const ITEMS_PER_PAGE = 20;
   const page = +req.query.page || 1;
 
   try {
     role === pageRoles.NOT_FOLLOWERS ? createError(403, "Forbidden") : null;
 
-    const result = await User.find(
-      {
-        friends: { $in: yourId },
-        likedPages: { $nin: pageId },
-      },
-      {
-        _id: 1,
-        firstName: 1,
-        lastName: 1,
-        logo: { $arrayElemAt: ["$profilePhotos", -1] },
-      }
-    )
-      .skip((page - 1) * ITEMS_PER_PAGE)
-      .limit(ITEMS_PER_PAGE);
+    const aggregationResult = await User.aggregate(
+      friendsWhoDidNotJoin(yourId, pageId, page, ITEMS_PER_PAGE)
+    );
 
-    res.json(result);
+    const totalFriends = aggregationResult[0]?.totalCount || 0;
+
+    res.status(200).json({
+      friendsNotJoin: aggregationResult[0]?.friends || [],
+      extraInfo: information(totalFriends, page, ITEMS_PER_PAGE),
+    });
   } catch (error) {
     next(error);
   }
