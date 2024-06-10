@@ -1749,17 +1749,19 @@ export const getPosts = async (req, res, next) => {
 export const getRates = async (req, res, next) => {
   const pageId = req.params.pageId;
   const yourId = req.userId;
-  const ITEMS_PER_PAGE = 2;
+  const ITEMS_PER_PAGE = 20;
   const page = +req.query.page || 1;
 
   try {
     const aggregationResult = await Page.aggregate(
       rates(pageId, yourId, page, ITEMS_PER_PAGE)
     );
+
+    console.log(aggregationResult);
     const totalRate = aggregationResult[0].totalCount;
 
     res.status(200).json({
-      avgRate: aggregationResult[0].avgRate[0].total,
+      avgRate: aggregationResult[0].avgRate[0]?.total,
       rates: aggregationResult[0].ratings,
       extraInfo: information(totalRate, page, ITEMS_PER_PAGE),
     });
