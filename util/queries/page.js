@@ -354,6 +354,7 @@ export const rates = (pageId, yourId, page, ITEMS_PER_PAGE) => {
                 value: "$ratings.value",
                 comment: "$ratings.comment",
                 ratingDate: "$ratings.ratingDate",
+                ratingId: "$ratings._id",
               },
             },
           },
