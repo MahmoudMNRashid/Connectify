@@ -1519,11 +1519,18 @@ export const ratePage = async (req, res, next) => {
       },
       {
         new: true,
-        select: "_id",
+        select: "_id ratings",
       }
     );
     !page ? createError(403, "Forbidden") : null;
-    res.status(200).json({ message: "you has been rating successfully" });
+
+    // Find the newly added rating
+    const newRating = page.ratings.find(
+      (rating) => rating.by.toString() === yourId.toString()
+    );
+    res
+      .status(200)
+      .json({ message: "you has been rating successfully", newRating });
   } catch (error) {
     next(error);
   }
