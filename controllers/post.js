@@ -360,8 +360,8 @@ export const deletePost = async (req, res, next) => {
     if (from === "page" || from === "profile") {
       canDelete = true;
     } else {
-      (role === rolesGroup.ADMIN && oldPost.userRole === rolesGroup.MEMBER) ||
-      role === rolesGroup.MODERATOR ||
+      (role === groupRoles.ADMIN && oldPost.userRole === groupRoles.MEMBER) ||
+      role === groupRoles.MODERATOR ||
       areYouOwner
         ? (canDelete = true)
         : null;
@@ -718,7 +718,7 @@ export const createComment = async (req, res, next) => {
     );
     !post ? createError(404, "did not find the post") : null;
     done = 1;
-    
+
     res.status(200).json({ message: "Your comment has been created", comment });
   } catch (error) {
     //if something happen delete assets you uploaded
