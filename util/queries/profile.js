@@ -830,16 +830,8 @@ export const postFromAll = (
       $match: {
         $or: [
           { group: { $in: groupIds } },
-          {
-            page: {
-              $in: [...likedPages, ...ownedPage],
-            },
-          },
-          {
-            profile: {
-              $in: [...friends, new mongoose.Types.ObjectId(yourId)],
-            },
-          },
+          { page: { $in: [...likedPages, ...ownedPage] } },
+          { profile: { $in: [...friends, new mongoose.Types.ObjectId(yourId)] } },
         ],
       },
     },
@@ -851,238 +843,234 @@ export const postFromAll = (
           {
             $and: [
               { group: { $exists: true } },
-              {
-                userId: {
-                  $nin: [...blockedProfiles, ...profilesYouBlocked],
-                },
-              },
+              { userId: { $nin: [...blockedProfiles, ...profilesYouBlocked] } },
             ],
           },
         ],
       },
     },
-
-    { $sort: { updatedAt: -1 } },
     {
-      $skip: (page - 1) * ITEMS_PER_PAGE,
-    },
-    {
-      $limit: ITEMS_PER_PAGE,
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "userId",
-        foreignField: "_id",
-        as: "user",
-      },
-    },
-    { $unwind: "$user" },
-    {
-      $lookup: {
-        from: "groups",
-        localField: "group",
-        foreignField: "_id",
-        as: "group",
-      },
-    },
-    {
-      $unwind: {
-        path: "$group",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $lookup: {
-        from: "pages",
-        localField: "page",
-        foreignField: "_id",
-        as: "page",
-      },
-    },
-
-    {
-      $unwind: {
-        path: "$page",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-
-    {
-      $project: {
-        _id: 0,
-        owner: {
-          userId: "$user._id",
-          firsName: "$user.firstName",
-          lastName: "$user.lastName",
-          logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
-        },
-        post: {
-          _idPost: "$_id",
-          description: "$description",
-          assets: "$assets",
-          numberOfComments: { $size: "$comments" },
-          numberOfLikes: { $size: "$likes" },
-          createdAt: "$createdAt",
-          updatedAt: "$updatedAt",
-          userRole: "$userRole",
-          isHeLikedInPost: {
-            $cond: {
-              if: { $in: [yourId, "$likes"] },
-              then: true,
-              else: false,
+      $facet: {
+        totalCount: [{ $count: "count" }],
+        posts: [
+          { $sort: { updatedAt: -1 } },
+          { $skip: (page - 1) * ITEMS_PER_PAGE },
+          { $limit: ITEMS_PER_PAGE },
+          {
+            $lookup: {
+              from: "users",
+              localField: "userId",
+              foreignField: "_id",
+              as: "user",
             },
           },
-        },
-        group: {
-          $cond: {
-            if: { $ifNull: ["$group", false] },
-            then: {
-              groupId: "$group._id",
-              description: "$group.description",
-              name: "$group.name",
-              cover: "$group.cover",
-              yourRoleInGroup: {
-                $cond: {
-                  if: {
-                    $in: [
-                      new mongoose.Types.ObjectId(yourId),
-                      "$group.members.userId",
-                    ],
+          { $unwind: "$user" },
+          {
+            $lookup: {
+              from: "groups",
+              localField: "group",
+              foreignField: "_id",
+              as: "group",
+            },
+          },
+          {
+            $unwind: {
+              path: "$group",
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $lookup: {
+              from: "pages",
+              localField: "page",
+              foreignField: "_id",
+              as: "page",
+            },
+          },
+          {
+            $unwind: {
+              path: "$page",
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              owner: {
+                userId: "$user._id",
+                firstName: "$user.firstName",
+                lastName: "$user.lastName",
+                logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
+              },
+              post: {
+                _idPost: "$_id",
+                description: "$description",
+                assets: "$assets",
+                numberOfComments: { $size: "$comments" },
+                numberOfLikes: { $size: "$likes" },
+                createdAt: "$createdAt",
+                updatedAt: "$updatedAt",
+                userRole: "$userRole",
+                isHeLikedInPost: {
+                  $cond: {
+                    if: { $in: [yourId, "$likes"] },
+                    then: true,
+                    else: false,
                   },
-                  then: groupRoles.MEMBER,
+                },
+              },
+              group: {
+                $cond: {
+                  if: { $ifNull: ["$group", false] },
+                  then: {
+                    groupId: "$group._id",
+                    description: "$group.description",
+                    name: "$group.name",
+                    cover: "$group.cover",
+                    yourRoleInGroup: {
+                      $cond: {
+                        if: {
+                          $in: [
+                            new mongoose.Types.ObjectId(yourId),
+                            "$group.members.userId",
+                          ],
+                        },
+                        then: groupRoles.MEMBER,
+                        else: {
+                          $cond: {
+                            if: {
+                              $in: [
+                                new mongoose.Types.ObjectId(yourId),
+                                "$group.admins.userId",
+                              ],
+                            },
+                            then: groupRoles.ADMIN,
+                            else: groupRoles.MODERATOR,
+                          },
+                        },
+                      },
+                    },
+                  },
+                  else: "$$REMOVE",
+                },
+              },
+              page: {
+                $cond: {
+                  if: { $ifNull: ["$page", false] },
+                  then: {
+                    pageId: "$page._id",
+                    name: "$page.name",
+                    logo: "$page.logo",
+                  },
+                  else: "$$REMOVE",
+                },
+              },
+            },
+          },
+          {
+            $addFields: {
+              postType: {
+                $cond: {
+                  if: { $ifNull: ["$group", false] },
+                  then: "group",
                   else: {
                     $cond: {
-                      if: {
-                        $in: [
-                          new mongoose.Types.ObjectId(yourId),
-                          "$group.admins.userId",
-                        ],
-                      },
-                      then: groupRoles.ADMIN,
-                      else: groupRoles.MODERATOR,
+                      if: { $ifNull: ["$page", false] },
+                      then: "page",
+                      else: "profile",
                     },
                   },
                 },
               },
+              isHeOwnerOfPost: {
+                $cond: {
+                  if: { $eq: ["$owner.userId", yourId] },
+                  then: true,
+                  else: false,
+                },
+              },
+              canUpdate: {
+                $cond: {
+                  if: { $eq: ["$owner.userId", yourId] },
+                  then: true,
+                  else: false,
+                },
+              },
+              canDelete: {
+                $cond: {
+                  if: { $ifNull: ["$group", false] },
+                  then: {
+                    $or: [
+                      { $eq: ["$owner.userId", yourId] },
+                      {
+                        $and: [
+                          { $eq: ["$group.yourRoleInGroup", groupRoles.ADMIN] },
+                          { $eq: ["$post.userRole", groupRoles.MEMBER] },
+                        ],
+                      },
+                      { $eq: ["$group.yourRoleInGroup", groupRoles.MODERATOR] },
+                    ],
+                  },
+                  else: { $eq: ["$owner.userId", yourId] },
+                },
+              },
+              canReport: {
+                $cond: {
+                  if: { $ifNull: ["$group", false] },
+                  then: {
+                    $cond: {
+                      if: {
+                        $and: [
+                          { $ne: ["$post.userRole", groupRoles.MODERATOR] },
+                          { $ne: ["$owner.userId", yourId] },
+                          { $ne: ["$group.yourRoleInGroup", groupRoles.MODERATOR] },
+                        ],
+                      },
+                      then: true,
+                      else: false,
+                    },
+                  },
+                  else: "$$REMOVE",
+                },
+              },
+              canBlock: {
+                $cond: {
+                  if: { $ifNull: ["$group", false] },
+                  then: {
+                    $cond: {
+                      if: {
+                        $or: [
+                          {
+                            $and: [
+                              { $in: ["$post.userRole", [groupRoles.MEMBER]] },
+                              { $eq: ["$group.yourRoleInGroup", groupRoles.ADMIN] },
+                              { $ne: ["$owner.userId", yourId] },
+                            ],
+                          },
+                          {
+                            $and: [
+                              { $eq: ["$group.yourRoleInGroup", groupRoles.MODERATOR] },
+                              { $ne: ["$owner.userId", yourId] },
+                            ],
+                          },
+                        ],
+                      },
+                      then: true,
+                      else: false,
+                    },
+                  },
+                  else: "$$REMOVE",
+                },
+              },
             },
-            else: "$$REMOVE",
           },
-        },
-        page: {
-          $cond: {
-            if: { $ifNull: ["$page", false] },
-            then: {
-              pageId: "$page._id",
-              name: "$page.name",
-              logo: "$page.logo",
-            },
-            else: "$$REMOVE",
-          },
-        },
+        ],
       },
     },
     {
-      $addFields: {
-        postType: {
-          $cond: {
-            if: { $ifNull: ["$group", false] },
-            then: "group",
-            else: {
-              $cond: {
-                if: { $ifNull: ["$page", false] },
-                then: "page",
-                else: "profile",
-              },
-            },
-          },
-        },
-        isHeOwnerOfPost: {
-          $cond: {
-            if: { $eq: ["$owner.userId", yourId] },
-            then: true,
-            else: false,
-          },
-        },
-        canUpdate: {
-          $cond: {
-            if: { $eq: ["$owner.userId", yourId] },
-            then: true,
-            else: false,
-          },
-        },
-        canDelete: {
-          $cond: {
-            if: { $ifNull: ["$group", false] },
-            then: {
-              $or: [
-                { $eq: ["$owner.userId", yourId] },
-                {
-                  $and: [
-                    { $eq: ["$group.yourRoleInGroup", groupRoles.ADMIN] },
-                    { $eq: ["$post.userRole", groupRoles.MEMBER] },
-                  ],
-                },
-                { $eq: ["$group.yourRoleInGroup", groupRoles.MODERATOR] },
-              ],
-            },
-            else: {
-              $eq: ["$owner.userId", yourId],
-            },
-          },
-        },
-        canReport: {
-          $cond: {
-            if: { $ifNull: ["$group", false] },
-            then: {
-              $cond: {
-                if: {
-                  $and: [
-                    { $ne: ["$post.userRole", groupRoles.MODERATOR] },
-                    { $ne: ["$owner.userId", yourId] },
-                    { $ne: ["$group.yourRoleInGroup", groupRoles.MODERATOR] },
-                  ],
-                },
-                then: true,
-                else: false,
-              },
-            },
-            else: "$$REMOVE",
-          },
-        },
-        canBlocked: {
-          $cond: {
-            if: { $ifNull: ["$group", false] },
-            then: {
-              $cond: {
-                if: {
-                  $or: [
-                    {
-                      $and: [
-                        {
-                          $in: ["$post.userRole", [groupRoles.MEMBER]],
-                        },
-                        { $eq: ["$group.yourRoleInGroup", groupRoles.ADMIN] },
-                        { $ne: ["$owner.userId", yourId] },
-                      ],
-                    },
-                    {
-                      $and: [
-                        {
-                          $eq: ["$group.yourRoleInGroup", groupRoles.MODERATOR],
-                        },
-                        { $ne: ["$owner.userId", yourId] },
-                      ],
-                    },
-                  ],
-                },
-                then: true,
-                else: false,
-              },
-            },
-            else: "$$REMOVE",
-          },
-        },
+      $project: {
+        totalCount: { $arrayElemAt: ["$totalCount.count", 0] },
+        posts: "$posts",
       },
     },
   ];

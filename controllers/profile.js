@@ -1981,8 +1981,12 @@ export const getPostsFromAll = async (req, res, next) => {
         ITEMS_PER_PAGE
       )
     );
+    const totalPosts = aggregationResult[0].totalCount;
 
-    return res.json({ aggregationResult });
+    return res.json({
+      homePosts: aggregationResult[0].posts,
+      extraInfo: information(totalPosts, page, ITEMS_PER_PAGE),
+    });
   } catch (error) {
     next(error);
   }
