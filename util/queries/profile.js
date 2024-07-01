@@ -906,6 +906,8 @@ export const postFromAll = (
                 _idPost: "$_id",
                 description: "$description",
                 assets: "$assets",
+                whoCanSee:"$whoCanSee",
+                whoCanComment:"$whoCanComment",
                 numberOfComments: { $size: "$comments" },
                 numberOfLikes: { $size: "$likes" },
                 createdAt: "$createdAt",
