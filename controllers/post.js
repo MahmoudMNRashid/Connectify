@@ -297,7 +297,7 @@ export const updatePost = async (req, res, next) => {
     if (deletedAssets && done) {
       await deleteAssets(deletedAssets);
     }
-    res.status(200).json({ message: "Post was updated" });
+    res.status(200).json({ message: "Post was updated", post: oldPost });
   } catch (error) {
     if (publicidAndLink) {
       await deleteAssets(publicidAndLink);
