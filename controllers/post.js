@@ -180,7 +180,9 @@ export const updatePost = async (req, res, next) => {
   const postId = req.body.postId;
   const description = req.body.description;
   const assets = req.files;
-  const deletedAssets = req.body.deletedAssets;
+  const deletedAssets = req.body.deletedAssets
+    ? JSON.parse(req.body.deletedAssets)
+    : undefined;
   const groupId = req.body.groupId;
   const pageId = req.body.pageId;
   const errors = validationResult(req);
