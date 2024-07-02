@@ -153,7 +153,9 @@ export const createPost = async (req, res, next) => {
     if (from === "page" || from === "profile") {
       res.status(200).json({
         message: "Your post created",
-        post: `${from === "profile" ? result1.toObject() : result.toObject()}`,
+        post: `${
+          from === "profile" ? JSON.stringify(result1) : JSON.stringify(result)
+        }`,
       });
     } else {
       group.immediatePost === false &&
@@ -163,7 +165,12 @@ export const createPost = async (req, res, next) => {
             message: "Your post has forwarded to admins",
             post: result2.toObject(),
           })
-        : res.status(200).json({ message: "Your post created", post: result2 });
+        : res
+            .status(200)
+            .json({
+              message: "Your post created",
+              post: JSON.stringify(result2),
+            });
     }
   } catch (error) {
     await session.abortTransaction();
