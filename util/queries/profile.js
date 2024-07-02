@@ -710,7 +710,7 @@ export const invitationsSentToMeFromGroups = (
                 groupId: "$group._id",
               },
               inviteDate: "$sentInvitesFromGroups.inviteDate",
-              idInvite:'$sentInvitesFromGroups._id'
+              idInvite: "$sentInvitesFromGroups._id",
             },
           },
         ],
@@ -794,10 +794,10 @@ export const invitationsSentToMeFromPages = (
                 name: "$page.name",
                 logo: "$page.logo",
                 bio: "$page.bio",
-                pageId:"$page._id"
+                pageId: "$page._id",
               },
               inviteDate: "$sentInvitesFromPage.inviteDate",
-              idInvite:'$sentInvitesFromPage._id'
+              idInvite: "$sentInvitesFromPage._id",
             },
           },
         ],
@@ -929,6 +929,7 @@ export const postFromAll = (
                     description: "$group.description",
                     name: "$group.name",
                     cover: "$group.cover",
+                    membersBlocked: "$group.membersBlocked",
                     yourRoleInGroup: {
                       $cond: {
                         if: {
@@ -1047,12 +1048,14 @@ export const postFromAll = (
                               { $in: ["$post.userRole", [groupRoles.MEMBER]] },
                               { $eq: ["$group.yourRoleInGroup", groupRoles.ADMIN] },
                               { $ne: ["$owner.userId", yourId] },
+                              { $not: { $in: ["$owner.userId", { $ifNull: ["$group.membersBlocked", []] }] } },
                             ],
                           },
                           {
                             $and: [
                               { $eq: ["$group.yourRoleInGroup", groupRoles.MODERATOR] },
                               { $ne: ["$owner.userId", yourId] },
+                              { $not: { $in: ["$owner.userId", { $ifNull: ["$group.membersBlocked", []] }] } },
                             ],
                           },
                         ],
@@ -1066,6 +1069,11 @@ export const postFromAll = (
               },
             },
           },
+          {
+            $project: {
+              "group.membersBlocked": 0,
+            },
+          },
         ],
       },
     },
@@ -1077,6 +1085,8 @@ export const postFromAll = (
     },
   ];
 };
+
+
 export const pepole = (query, yourId, page, ITEMS_PER_PAGE) => {
   return [
     {

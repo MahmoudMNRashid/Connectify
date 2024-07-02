@@ -205,7 +205,7 @@ export const posts = (pageId, yourId, role, page, ITEMS_PER_PAGE) => {
             },
           },
           {
-            $sort: { "posts.updatedAt": -1 }, // Sort posts within each group by updatedAt descending
+            $sort: { updatedAt: -1 }, // Sort posts within each group by updatedAt descending
           },
 
           {
@@ -236,6 +236,8 @@ export const posts = (pageId, yourId, role, page, ITEMS_PER_PAGE) => {
                 _idPost: "$_id",
                 description: "$description",
                 assets: "$assets",
+                assets: "$whoCanSee",
+                assets: "$whoCanComment",
                 numberOfComments: "$numberOfComments",
                 numberOfLikes: "$numberOfLikes",
                 createdAt: "$createdAt",

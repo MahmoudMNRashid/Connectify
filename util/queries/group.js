@@ -377,58 +377,6 @@ export const posts = (
         ],
         posts: [
           {
-            $project: {
-              posts: {
-                $cond: {
-                  if: {
-                    $and: [
-                      { $ne: [role, groupRoles.MODERATOR] },
-                      { $ne: [role, groupRoles.ADMIN] },
-                    ],
-                  },
-                  then: {
-                    $filter: {
-                      input: ["$$ROOT"],
-                      as: "post",
-                      cond: {
-                        $not: {
-                          $in: [
-                            "$$post.userId",
-                            [...profilesYouBlocked, ...blockedProfiles],
-                          ],
-                        },
-                      },
-                    },
-                  },
-                  else: "$$ROOT",
-                },
-              },
-            },
-          },
-          {
-            $unwind: "$posts",
-          },
-          {
-            $project: {
-              _id: "$posts._id",
-              userId: "$posts.userId",
-              description: "$posts.description",
-              assets: "$posts.assets",
-              numberOfComments: { $size: "$posts.comments" },
-              numberOfLikes: { $size: "$posts.likes" },
-              createdAt: "$posts.createdAt",
-              updatedAt: "$posts.updatedAt",
-              userRole: "$posts.userRole",
-              isHeLikedInPost: {
-                $cond: {
-                  if: { $in: [yourId, "$posts.likes"] },
-                  then: true,
-                  else: false,
-                },
-              },
-            },
-          },
-          {
             $lookup: {
               from: "users",
               localField: "userId",
@@ -437,23 +385,28 @@ export const posts = (
             },
           },
           {
-            $sort: { "posts.updatedAt": -1 }, // Sort posts within each group by updatedAt descending
-          },
-
-          {
-            $skip: (page - 1) * ITEMS_PER_PAGE,
+            $unwind: "$user",
           },
           {
-            $limit: ITEMS_PER_PAGE,
+            $lookup: {
+              from: "groups",
+              localField: "group",
+              foreignField: "_id",
+              as: "group",
+            },
           },
-
-          { $unwind: "$user" },
+          {
+            $unwind: {
+              path: "$group",
+              preserveNullAndEmptyArrays: true,
+            },
+          },
           {
             $project: {
               _id: 0,
               owner: {
                 userId: "$user._id",
-                firsName: "$user.firstName",
+                firstName: "$user.firstName",
                 lastName: "$user.lastName",
                 logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               },
@@ -461,18 +414,61 @@ export const posts = (
                 _idPost: "$_id",
                 description: "$description",
                 assets: "$assets",
-                numberOfComments: "$numberOfComments",
-                numberOfLikes: "$numberOfLikes",
+                numberOfComments: { $size: "$comments" },
+                numberOfLikes: { $size: "$likes" },
                 createdAt: "$createdAt",
                 updatedAt: "$updatedAt",
                 userRole: "$userRole",
-                isHeLikedInPost: "$isHeLikedInPost",
+                isHeLikedInPost: {
+                  $cond: {
+                    if: { $in: [yourId, "$likes"] },
+                    then: true,
+                    else: false,
+                  },
+                },
+              },
+              group: {
+                groupId: "$group._id",
+                description: "$group.description",
+                name: "$group.name",
+                cover: "$group.cover",
+                membersBlocked: "$group.membersBlocked",
+                yourRoleInGroup: {
+                  $cond: {
+                    if: {
+                      $in: [
+                        new mongoose.Types.ObjectId(yourId),
+                        "$group.members.userId",
+                      ],
+                    },
+                    then: groupRoles.MEMBER,
+                    else: {
+                      $cond: {
+                        if: {
+                          $in: [
+                            new mongoose.Types.ObjectId(yourId),
+                            "$group.admins.userId",
+                          ],
+                        },
+                        then: groupRoles.ADMIN,
+                        else: groupRoles.MODERATOR,
+                      },
+                    },
+                  },
+                },
               },
             },
           },
           {
             $addFields: {
               isHeOwnerOfPost: {
+                $cond: {
+                  if: { $eq: ["$owner.userId", yourId] },
+                  then: true,
+                  else: false,
+                },
+              },
+              canUpdate: {
                 $cond: {
                   if: { $eq: ["$owner.userId", yourId] },
                   then: true,
@@ -499,19 +495,12 @@ export const posts = (
                   else: false,
                 },
               },
-              canUpdate: {
-                $cond: {
-                  if: { $eq: ["$owner.userId", yourId] },
-                  then: true,
-                  else: false,
-                },
-              },
               canReport: {
                 $cond: {
                   if: {
                     $and: [
                       { $ne: ["$post.userRole", groupRoles.MODERATOR] },
-                      { $ne: [role, [groupRoles.NOT_Member]] },
+                      { $ne: [role, groupRoles.NOT_Member] },
                       { $ne: ["$owner.userId", yourId] },
                     ],
                   },
@@ -519,23 +508,23 @@ export const posts = (
                   else: false,
                 },
               },
-              canBlocked: {
+              canBlock: {
                 $cond: {
                   if: {
                     $or: [
                       {
                         $and: [
-                          {
-                            $in: ["$post.userRole", [groupRoles.MEMBER]],
-                          },
+                          { $in: ["$post.userRole", [groupRoles.MEMBER]] },
                           { $eq: [role, groupRoles.ADMIN] },
                           { $ne: ["$owner.userId", yourId] },
+                          { $not: { $in: ["$owner.userId", { $ifNull: ["$group.membersBlocked", []] }] } },
                         ],
                       },
                       {
                         $and: [
                           { $eq: [role, groupRoles.MODERATOR] },
                           { $ne: ["$owner.userId", yourId] },
+                          { $not: { $in: ["$owner.userId", { $ifNull: ["$group.membersBlocked", []] }] } },
                         ],
                       },
                     ],
@@ -553,10 +542,23 @@ export const posts = (
               },
             },
           },
+          {
+            $project: {
+              "group.membersBlocked": 0,
+            },
+          },
+          {
+            $sort: { "post.updatedAt": -1 }, // Sort posts within each group by updatedAt descending
+          },
+          {
+            $skip: (page - 1) * ITEMS_PER_PAGE,
+          },
+          {
+            $limit: ITEMS_PER_PAGE,
+          },
         ],
       },
     },
-
     {
       $project: {
         posts: 1,
