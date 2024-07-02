@@ -101,7 +101,7 @@ export const createPost = async (req, res, next) => {
       post.page = new mongoose.Types.ObjectId(pageId);
       post.whoCanComment = whoCanComment;
       post.whoCanSee = whoCanSee;
-      var result = await post.save({ session });
+      var result = await post.save({ session, lean: true });
       await Page.updateOne(
         { _id: pageId },
         {
@@ -114,7 +114,7 @@ export const createPost = async (req, res, next) => {
       post.whoCanComment = whoCanComment;
       post.whoCanSee = whoCanSee;
 
-      var result1 = await post.save({ session });
+      var result1 = await post.save({ session, lean: true });
 
       await User.updateOne(
         { _id: yourId },
