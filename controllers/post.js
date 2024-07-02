@@ -114,7 +114,7 @@ export const createPost = async (req, res, next) => {
       post.whoCanComment = whoCanComment;
       post.whoCanSee = whoCanSee;
 
-      var result1 = await post.save({ session, lean: true });
+      var result1 = await post.save({ session });
 
       await User.updateOne(
         { _id: yourId },
@@ -153,7 +153,7 @@ export const createPost = async (req, res, next) => {
     if (from === "page" || from === "profile") {
       res.status(200).json({
         message: "Your post created",
-        post: `${from === "profile" ? result1 : result}`,
+        post: `${from === "profile" ? result1.toObject() : result.toObject()}`,
       });
     } else {
       group.immediatePost === false &&
@@ -161,7 +161,7 @@ export const createPost = async (req, res, next) => {
       userRole !== groupRoles.MODERATOR
         ? res.status(200).json({
             message: "Your post has forwarded to admins",
-            post: result2,
+            post: result2.toObject(),
           })
         : res.status(200).json({ message: "Your post created", post: result2 });
     }
