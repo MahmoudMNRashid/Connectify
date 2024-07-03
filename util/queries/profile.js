@@ -134,6 +134,8 @@ export const posts = (profileId, role, yourId, ITEMS_PER_PAGE, page) => {
                 assets: "$assets",
                 numberOfComments: "$numberOfComments",
                 numberOfLikes: "$numberOfLikes",
+                whoCanSee: "$whoCanSee",
+                whoCanComment: "$whoCanComment",
                 createdAt: "$createdAt",
                 updatedAt: "$updatedAt",
                 userRole: "$userRole",
@@ -831,7 +833,9 @@ export const postFromAll = (
         $or: [
           { group: { $in: groupIds } },
           { page: { $in: [...likedPages, ...ownedPage] } },
-          { profile: { $in: [...friends, new mongoose.Types.ObjectId(yourId)] } },
+          {
+            profile: { $in: [...friends, new mongoose.Types.ObjectId(yourId)] },
+          },
         ],
       },
     },
@@ -906,8 +910,8 @@ export const postFromAll = (
                 _idPost: "$_id",
                 description: "$description",
                 assets: "$assets",
-                whoCanSee:"$whoCanSee",
-                whoCanComment:"$whoCanComment",
+                whoCanSee: "$whoCanSee",
+                whoCanComment: "$whoCanComment",
                 numberOfComments: { $size: "$comments" },
                 numberOfLikes: { $size: "$likes" },
                 createdAt: "$createdAt",
@@ -1026,7 +1030,12 @@ export const postFromAll = (
                         $and: [
                           { $ne: ["$post.userRole", groupRoles.MODERATOR] },
                           { $ne: ["$owner.userId", yourId] },
-                          { $ne: ["$group.yourRoleInGroup", groupRoles.MODERATOR] },
+                          {
+                            $ne: [
+                              "$group.yourRoleInGroup",
+                              groupRoles.MODERATOR,
+                            ],
+                          },
                         ],
                       },
                       then: true,
@@ -1046,16 +1055,40 @@ export const postFromAll = (
                           {
                             $and: [
                               { $in: ["$post.userRole", [groupRoles.MEMBER]] },
-                              { $eq: ["$group.yourRoleInGroup", groupRoles.ADMIN] },
+                              {
+                                $eq: [
+                                  "$group.yourRoleInGroup",
+                                  groupRoles.ADMIN,
+                                ],
+                              },
                               { $ne: ["$owner.userId", yourId] },
-                              { $not: { $in: ["$owner.userId", { $ifNull: ["$group.membersBlocked", []] }] } },
+                              {
+                                $not: {
+                                  $in: [
+                                    "$owner.userId",
+                                    { $ifNull: ["$group.membersBlocked", []] },
+                                  ],
+                                },
+                              },
                             ],
                           },
                           {
                             $and: [
-                              { $eq: ["$group.yourRoleInGroup", groupRoles.MODERATOR] },
+                              {
+                                $eq: [
+                                  "$group.yourRoleInGroup",
+                                  groupRoles.MODERATOR,
+                                ],
+                              },
                               { $ne: ["$owner.userId", yourId] },
-                              { $not: { $in: ["$owner.userId", { $ifNull: ["$group.membersBlocked", []] }] } },
+                              {
+                                $not: {
+                                  $in: [
+                                    "$owner.userId",
+                                    { $ifNull: ["$group.membersBlocked", []] },
+                                  ],
+                                },
+                              },
                             ],
                           },
                         ],
@@ -1085,7 +1118,6 @@ export const postFromAll = (
     },
   ];
 };
-
 
 export const pepole = (query, yourId, page, ITEMS_PER_PAGE) => {
   return [
