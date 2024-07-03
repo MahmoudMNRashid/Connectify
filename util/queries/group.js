@@ -630,7 +630,7 @@ export const requestPosts = (groupId, page, ITEMS_PER_PAGE) => {
               _id: 0,
               owner: {
                 userId: "$user._id",
-                firsName: "$user.firstName",
+                firstName: "$user.firstName",
                 lastName: "$user.lastName",
                 logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               },
@@ -811,7 +811,7 @@ export const joiningRequest = (groupId, ITEMS_PER_PAGE, page) => {
           {
             $project: {
               userId: "$user._id",
-              firsName: "$user.firstName",
+              firstName: "$user.firstName",
               lastName: "$user.lastName",
               logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               requestDate: "$joiningRequests.requestDate",
@@ -922,7 +922,7 @@ export const reports = (groupId, yourId, page, ITEMS_PER_PAGE) => {
             $project: {
               from: {
                 userId: "$user._id",
-                firsName: "$user.firstName",
+                firstName: "$user.firstName",
                 lastName: "$user.lastName",
                 logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               },
@@ -936,7 +936,7 @@ export const reports = (groupId, yourId, page, ITEMS_PER_PAGE) => {
                 updatedAt: "$post.updatedAt",
                 ownerPost: {
                   userId: "$ownerPost._id",
-                  firsName: "$ownerPost.firstName",
+                  firstName: "$ownerPost.firstName",
                   lastName: "$ownerPost.lastName",
                   logo: { $arrayElemAt: ["$ownerPost.profilePhotos", -1] },
                 },
@@ -1022,7 +1022,7 @@ export const reportsFromAdmin = (groupId, page, ITEMS_PER_PAGE) => {
             $project: {
               from: {
                 userId: "$user._id",
-                firsName: "$user.firstName",
+                firstName: "$user.firstName",
                 lastName: "$user.lastName",
                 logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               },
@@ -1036,7 +1036,7 @@ export const reportsFromAdmin = (groupId, page, ITEMS_PER_PAGE) => {
                 updatedAt: "$post.updatedAt",
                 ownerPost: {
                   userId: "$ownerPost._id",
-                  firsName: "$ownerPost.firstName",
+                  firstName: "$ownerPost.firstName",
                   lastName: "$ownerPost.lastName",
                   logo: { $arrayElemAt: ["$ownerPost.profilePhotos", -1] },
                 },

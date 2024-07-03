@@ -37,7 +37,7 @@ export const followers = (pageId, page, ITEMS_PER_PAGE) => {
           {
             $project: {
               userId: "$user._id",
-              firsName: "$user.firstName",
+              firstName: "$user.firstName",
               lastName: "$user.lastName",
               logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
             },
@@ -93,7 +93,7 @@ export const usersBlocked = (pageId, page, ITEMS_PER_PAGE) => {
           {
             $project: {
               userId: "$user._id",
-              firsName: "$user.firstName",
+              firstName: "$user.firstName",
               lastName: "$user.lastName",
               logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               date: "$usersBlocked.date",
@@ -228,7 +228,7 @@ export const posts = (pageId, yourId, role, page, ITEMS_PER_PAGE) => {
               _id: 0,
               owner: {
                 userId: "$user._id",
-                firsName: "$user.firstName",
+                firstName: "$user.firstName",
                 lastName: "$user.lastName",
                 logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               },
@@ -348,7 +348,7 @@ export const rates = (pageId, yourId, page, ITEMS_PER_PAGE) => {
             $project: {
               from: {
                 userId: "$user._id",
-                firsName: "$user.firstName",
+                firstName: "$user.firstName",
                 lastName: "$user.lastName",
                 logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               },

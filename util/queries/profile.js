@@ -124,7 +124,7 @@ export const posts = (profileId, role, yourId, ITEMS_PER_PAGE, page) => {
               _id: 0,
               owner: {
                 userId: "$user._id",
-                firsName: "$user.firstName",
+                firstName: "$user.firstName",
                 lastName: "$user.lastName",
                 logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               },
@@ -238,7 +238,7 @@ export const friends = (
           {
             $project: {
               userId: "$user._id",
-              firsName: "$user.firstName",
+              firstName: "$user.firstName",
               lastName: "$user.lastName",
               logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
             },
@@ -298,7 +298,7 @@ export const friendsRequestSentToMe = (profileId, page, ITEMS_PER_PAGE) => {
           {
             $project: {
               userId: "$user._id",
-              firsName: "$user.firstName",
+              firstName: "$user.firstName",
               lastName: "$user.lastName",
               logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               sendingDate: "$friendsRequestRecieve.dateSending",
@@ -361,7 +361,7 @@ export const friendsRequestSentByMe = (profileId, page, ITEMS_PER_PAGE) => {
           {
             $project: {
               userId: "$user._id",
-              firsName: "$user.firstName",
+              firstName: "$user.firstName",
               lastName: "$user.lastName",
               logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               sendingDate: "$friendsRequestSend.dateSending",
@@ -699,7 +699,7 @@ export const invitationsSentToMeFromGroups = (
             $project: {
               sender: {
                 userId: "$user._id",
-                firsName: "$user.firstName",
+                firstName: "$user.firstName",
                 lastName: "$user.lastName",
                 logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               },
@@ -786,7 +786,7 @@ export const invitationsSentToMeFromPages = (
             $project: {
               sender: {
                 userId: "$user._id",
-                firsName: "$user.firstName",
+                firstName: "$user.firstName",
                 lastName: "$user.lastName",
                 logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               },

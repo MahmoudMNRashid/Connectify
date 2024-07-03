@@ -613,7 +613,7 @@ export const likesForProfilePost = (
           {
             $project: {
               userId: "$user._id",
-              firsName: "$user.firstName",
+              firstName: "$user.firstName",
               lastName: "$user.lastName",
               logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
             },
@@ -745,7 +745,7 @@ export const likesForPagePost = (
           {
             $project: {
               userId: "$user._id",
-              firsName: "$user.firstName",
+              firstName: "$user.firstName",
               lastName: "$user.lastName",
               logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
             },
@@ -887,7 +887,7 @@ export const likesForGroupPost = (
           {
             $project: {
               userId: "$user._id",
-              firsName: "$user.firstName",
+              firstName: "$user.firstName",
               lastName: "$user.lastName",
               logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
             },
@@ -1053,7 +1053,7 @@ export const searchInProfilePosts = (
               _id: 0,
               owner: {
                 userId: "$user._id",
-                firsName: "$user.firstName",
+                firstName: "$user.firstName",
                 lastName: "$user.lastName",
                 logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               },
@@ -1237,7 +1237,7 @@ export const searchInPagePosts = (
               _id: 0,
               owner: {
                 userId: "$user._id",
-                firsName: "$user.firstName",
+                firstName: "$user.firstName",
                 lastName: "$user.lastName",
                 logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               },
@@ -1432,7 +1432,7 @@ export const searchInGroupPosts = (
               _id: 0,
               owner: {
                 userId: "$user._id",
-                firsName: "$user.firstName",
+                firstName: "$user.firstName",
                 lastName: "$user.lastName",
                 logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               },
