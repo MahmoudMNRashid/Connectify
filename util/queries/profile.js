@@ -101,7 +101,7 @@ export const posts = (profileId, role, yourId, ITEMS_PER_PAGE, page) => {
             },
           },
           {
-            $sort: { "posts.updatedAt": -1 },
+            $sort: { "updatedAt": -1 },
           },
 
           {
