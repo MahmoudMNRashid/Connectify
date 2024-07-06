@@ -63,77 +63,45 @@ export const createPage = async (req, res, next) => {
     next(error);
   }
 };
-export const addCover = async (req, res, next) => {
-  const cover = req.files;
-  const pageId = req.body.pageId;
 
-  try {
-    //check Validation and Filter
-    cover.length !== 1 ? createError(422, "Please upload one photo") : null;
-    fileFilterPhotosAndVideos(cover);
-
-    //Get page with cover
-    const page = await Page.findOne(
-      { _id: pageId, cover: { $exists: false } },
-      { cover: 1 }
-    );
-
-    //Check if you already added one
-    !page ? createError("400", "There is a previous cover") : null;
-
-    //Upload cover to cloudinary
-    var publicID_Link = [];
-    publicID_Link = await uploadAssets(
-      cover,
-      `Assets_from_Pages/${page._id}-${page.name}/cover`
-    );
-    //save change in db
-    page.cover = publicID_Link[0];
-    await page.save();
-
-    res.status(200).json({ message: "Cover  was added ", link: publicID_Link });
-  } catch (error) {
-    if (publicID_Link) {
-      await deleteAssets();
-    }
-    next(error);
-  }
-};
 export const updateCover = async (req, res, next) => {
   const cover = req.files;
   const pageId = req.body.pageId;
 
   try {
     //check if uploaded more than one photo
-    cover.length !== 1 ? createError(422, "Please upload one photo") : null;
+    cover.length !== 1 || !cover
+      ? createError(422, "Please upload one photo")
+      : null;
 
     // Filter photo (for example if he upload pdf file)
     fileFilterPhotosAndVideos(cover);
 
     //Get page with old cover
-    const page = await Page.findOne(
-      { _id: pageId, cover: { $exists: true } },
-      { cover: 1 }
-    );
-
-    //Check if you not added one
-    !page ? createError("400", "There is no previous cover") : null;
+    const page = await Page.findOne({ _id: pageId }, { cover: 1 });
 
     //Upload cover to cloudinary
     var publicID_Link = [];
     publicID_Link = await uploadAssets(
       cover,
-      `Assets_from_Pages/${page._id}-${page.name}/cover`
+      `Assets_from_Pages/${page._id}/cover`
     );
     //extract old cover
     const oldCover = page.cover;
+    console.log(oldCover);
     //Update db and temp for ensure we save changes in db and now can delete cover from cloudinary
-    page.cover == publicID_Link[0];
     var temp = 0;
-    await page.save();
+    await Page.updateOne(
+      { _id: pageId },
+      {
+        cover: publicID_Link[0],
+      }
+    );
     temp = 1;
     //send response
-    res.status(200).json({ message: "Cover was updated", link: publicID_Link });
+    res
+      .status(200)
+      .json({ message: "Cover was updated", link: publicID_Link[0] });
 
     //delete old cover from cloudinary
     temp ? await deleteAssets([oldCover]) : null;
@@ -147,80 +115,48 @@ export const updateCover = async (req, res, next) => {
   }
 };
 
-export const addLogo = async (req, res, next) => {
-  const logo = req.files;
-  const pageId = req.body.pageId;
-
-  try {
-    //check Validation and Filter
-    logo.length !== 1 ? createError(422, "Please upload one photo") : null;
-    fileFilterPhotosAndVideos(logo);
-
-    //Get page with logo
-    const page = await Page.findOne(
-      { _id: pageId, logo: { $exists: false } },
-      { logo: 1 }
-    );
-
-    //Check if you already added one
-    !page ? createError("400", "There is a previous logo") : null;
-
-    //Upload logo to cloudinary
-    var publicID_Link = [];
-    publicID_Link = await uploadAssets(
-      logo,
-      `Assets_from_Pages/${page._id}-${page.name}/logo`
-    );
-    //save change in db
-    page.logo = publicID_Link[0];
-    await page.save();
-
-    res.status(200).json({ message: "Logo  was added ", link: publicID_Link });
-  } catch (error) {
-    if (publicID_Link) {
-      await deleteAssets();
-    }
-    next(error);
-  }
-};
 export const updateLogo = async (req, res, next) => {
   const logo = req.files;
   const pageId = req.body.pageId;
 
   try {
     //check if uploaded more than one photo
-    logo.length !== 1 ? createError(422, "Please upload one photo") : null;
+    logo.length !== 1 || !logo
+      ? createError(422, "Please upload one photo")
+      : null;
 
     // Filter photo (for example if he upload pdf file)
     fileFilterPhotosAndVideos(logo);
 
     //Get page with old logo
-    const page = await Page.findOne(
-      { _id: pageId, logo: { $exists: true } },
-      { logo: 1 }
-    );
-
-    //Check if you not added one
-    !page ? createError("400", "There is no previous logo") : null;
+    const page = await Page.findOne({ _id: pageId }, { logo: 1 });
 
     //Upload logo to cloudinary
     var publicID_Link = [];
     publicID_Link = await uploadAssets(
       logo,
-      `Assets_from_Pages/${page._id}-${page.name}/logo`
+      `Assets_from_Pages/${page._id}}/logo`
     );
+
     //extract old logo
     const oldLogo = page.logo;
     //Update db and temp for ensure we save changes in db and now can delete cover from cloudinary
     page.logo == publicID_Link[0];
     var temp = 0;
-    await page.save();
+    await Page.updateOne(
+      { _id: pageId },
+      {
+        logo: publicID_Link[0],
+      }
+    );
     temp = 1;
     //send response
-    res.status(200).json({ message: "Logo was updated", link: publicID_Link });
+    res
+      .status(200)
+      .json({ message: "Logo was updated", link: publicID_Link[0] });
 
     //delete old logo from cloudinary
-    temp ? await deleteAssets([oldLogo]) : null;
+    temp && oldLogo ? await deleteAssets([oldLogo]) : null;
   } catch (error) {
     if (temp === 0) {
       if (publicID_Link) {

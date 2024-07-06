@@ -4,9 +4,7 @@ import { isAuth } from "../middleware/is-Auth.js";
 import { canSeeWithRole, isOwner } from "../middleware/for-Page.js";
 import {
   createPage as createPageController,
-  addCover as addCoverController,
   updateCover as updateCoverController,
-  addLogo as addLogoController,
   updateLogo as updateLogoController,
   addBio as addBioController,
   updateBio as updateBioController,
@@ -86,11 +84,11 @@ router.post(
 );
 
 //add cover
-router.post("/addCover", isAuth, isOwner, addCoverController);
+router.post("/addCover", isAuth, isOwner, updateCoverController);
 //update cover
 router.post("/updateCover", isAuth, isOwner, updateCoverController);
 //add logo
-router.post("/addLogo", isAuth, isOwner, addLogoController);
+router.post("/addLogo", isAuth, isOwner, updateLogoController);
 //update logo
 router.post("/updateLogo", isAuth, isOwner, updateLogoController);
 //add bio

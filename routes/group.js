@@ -54,8 +54,6 @@ import {
   visibility,
 } from "../util/configGroup.js";
 
-
-
 const router = express.Router();
 
 //create group
@@ -64,12 +62,18 @@ router.post(
   isAuth,
   [
     body("name", "Name should be not empty").notEmpty(),
-    body("privacy", "Privacy should be public or private").isIn(privacy),
+    body("privacy", "Privacy should be public or private").isIn([
+      privacy.PUBLIC,
+      privacy.PRIVATE,
+    ]),
     body("visibility")
       .isIn([visibility.HIDDEN, visibility.VISIBLE])
       .withMessage("Visibility should be visible or hidden ")
       .custom((value, { req }) => {
-        if (req.body.privacy === privacy.PUBLIC&& value === visibility.HIDDEN) {
+        if (
+          req.body.privacy === privacy.PUBLIC &&
+          value === visibility.HIDDEN
+        ) {
           throw new Error("Can not set public and hidden together ");
         } else {
           return true;
@@ -124,7 +128,7 @@ router.post(
   isAuth,
   isModerator,
   body("privacy")
-    .isIn([privacy.PRIVATE,privacy.PUBLIC])
+    .isIn([privacy.PRIVATE, privacy.PUBLIC])
     .withMessage("privacy should be public or private "),
   changePrivacyController
 );

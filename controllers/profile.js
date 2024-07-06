@@ -283,7 +283,6 @@ export const updateProfileBackgroundPhoto = async (req, res, next) => {
     fileFilterPhotosAndVideos(newPhoto);
     const linkAndTypeForPhoto = await uploadAssets(
       newPhoto,
-      1,
       `profile/${yourId}/BackgroundPhoto`
     );
 
