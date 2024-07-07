@@ -165,12 +165,10 @@ export const createPost = async (req, res, next) => {
             message: "Your post has forwarded to admins",
             post: result2.toObject(),
           })
-        : res
-            .status(200)
-            .json({
-              message: "Your post created",
-              post: JSON.stringify(result2),
-            });
+        : res.status(200).json({
+            message: "Your post created",
+            post: JSON.stringify(result2),
+          });
     }
   } catch (error) {
     await session.abortTransaction();
@@ -1276,7 +1274,14 @@ export const searchInPosts = async (req, res, next) => {
 
     if (from === "profile") {
       const aggregationResult = await Post.aggregate(
-        searchInProfilePosts(profileId, role, page, ITEMS_PER_PAGE, yourId)
+        searchInProfilePosts(
+          profileId,
+          role,
+          page,
+          ITEMS_PER_PAGE,
+          yourId,
+          word
+        )
       );
 
       const totalPosts = aggregationResult[0].totalCount;
@@ -1289,7 +1294,7 @@ export const searchInPosts = async (req, res, next) => {
       });
     } else if (from === "page") {
       const aggregationResult = await Post.aggregate(
-        searchInPagePosts(pageId, role, page, ITEMS_PER_PAGE, yourId)
+        searchInPagePosts(pageId, role, page, ITEMS_PER_PAGE, word)
       );
       const totalPosts = aggregationResult[0].totalCount;
 
@@ -1311,7 +1316,8 @@ export const searchInPosts = async (req, res, next) => {
           profilesYouBlocked,
           page,
           ITEMS_PER_PAGE,
-          yourId
+          yourId,
+          word
         )
       );
 

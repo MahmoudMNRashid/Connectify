@@ -924,7 +924,7 @@ export const searchInProfilePosts = (
   role,
   page,
   ITEMS_PER_PAGE,
-  yourId
+  yourId,word
 ) => {
   return [
     {
@@ -1112,7 +1112,7 @@ export const searchInPagePosts = (
   role,
   page,
   ITEMS_PER_PAGE,
-  yourId
+  yourId,word
 ) => {
   return [
     {
@@ -1298,7 +1298,7 @@ export const searchInGroupPosts = (
   profilesYouBlocked,
   page,
   ITEMS_PER_PAGE,
-  yourId
+  yourId,word
 ) => {
   return [
     {
