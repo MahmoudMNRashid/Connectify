@@ -1121,12 +1121,12 @@ export const postFromAll = (
 
 export const pepole = (query, yourId, page, ITEMS_PER_PAGE) => {
   return [
-    {
-      $match: {
-        $text: { $search: query.toString() },
-      },
+    { 
+      $match: { 
+        $text: { $search: query.toString() } 
+      } 
     },
-    {
+    { 
       $project: {
         _id: "$_id",
         firstName: "$firstName",
@@ -1135,43 +1135,54 @@ export const pepole = (query, yourId, page, ITEMS_PER_PAGE) => {
         profilesYouBlocked: "$profilesYouBlocked",
         friends: "$friends",
         logo: { $arrayElemAt: ["$profilePhotos", -1] },
-      },
+      } 
     },
-
-    {
+    { 
       $match: {
         $and: [
-          {
-            profilesYouBlocked: { $nin: [yourId] },
-          },
-          {
-            blockedProfiles: { $nin: [yourId] },
-          },
+          { profilesYouBlocked: { $nin: [yourId] } },
+          { blockedProfiles: { $nin: [yourId] } },
         ],
-      },
+      } 
     },
-    {
-      $project: {
-        _id: 1,
-        firstName: 1,
-        lastName: 1,
-        logo: 1,
-        areYouFriends: {
-          $cond: {
-            if: { $in: [yourId, "$friends"] },
-            then: true,
-            else: false,
+    { 
+      $facet: {
+        totalCount: [
+          { $count: "count" }
+        ],
+        people: [
+          { 
+            $project: {
+              _id: 1,
+              firstName: 1,
+              lastName: 1,
+              logo: 1,
+              areYouFriends: {
+                $cond: {
+                  if: { $in: [yourId, "$friends"] },
+                  then: true,
+                  else: false,
+                },
+              },
+            } 
           },
-        },
-      },
+          { 
+            $skip: (page - 1) * ITEMS_PER_PAGE 
+          },
+          { 
+            $limit: ITEMS_PER_PAGE 
+          }
+        ]
+      } 
     },
-
-    {
-      $skip: (page - 1) * ITEMS_PER_PAGE,
-    },
-    {
-      $limit: ITEMS_PER_PAGE,
-    },
+    { 
+      $project: {
+        people: 1,
+        totalCount: { 
+          $arrayElemAt: ["$totalCount.count", 0] 
+        }
+      } 
+    }
   ];
 };
 export const pages = (query, yourId, page, ITEMS_PER_PAGE) => {
@@ -1181,12 +1192,10 @@ export const pages = (query, yourId, page, ITEMS_PER_PAGE) => {
         $text: { $search: query.toString() },
       },
     },
-
     {
       $project: {
         _id: "$_id",
         name: "$name",
-
         logo: "$logo",
         bio: "$bio",
         usersLiked: "$usersLiked",
@@ -1199,34 +1208,50 @@ export const pages = (query, yourId, page, ITEMS_PER_PAGE) => {
         usersBlocked: { $nin: [yourId] },
       },
     },
-
     {
-      $project: {
-        _id: 1,
-        name: 1,
-        logo: 1,
-        bio: 1,
-        areYouFollowers: {
-          $cond: {
-            if: { $in: [yourId, "$usersLiked"] },
-            then: true,
-            else: false,
+      $facet: {
+        totalCount: [
+          { $count: "count" }
+        ],
+        pages: [
+          {
+            $project: {
+              _id: 1,
+              name: 1,
+              logo: 1,
+              bio: 1,
+              areYouFollowers: {
+                $cond: {
+                  if: { $in: [yourId, "$usersLiked"] },
+                  then: true,
+                  else: false,
+                },
+              },
+              areYouOwner: {
+                $cond: {
+                  if: { $eq: [yourId, "$owner"] },
+                  then: true,
+                  else: false,
+                },
+              },
+            },
           },
-        },
-        areYouOwner: {
-          $cond: {
-            if: { $eq: [yourId, "$owner"] },
-            then: true,
-            else: false,
+          {
+            $skip: (page - 1) * ITEMS_PER_PAGE,
           },
-        },
+          {
+            $limit: ITEMS_PER_PAGE,
+          },
+        ],
       },
     },
     {
-      $skip: (page - 1) * ITEMS_PER_PAGE,
-    },
-    {
-      $limit: ITEMS_PER_PAGE,
+      $project: {
+        pages: 1,
+        totalCount: {
+          $arrayElemAt: ["$totalCount.count", 0],
+        },
+      },
     },
   ];
 };
@@ -1261,7 +1286,7 @@ export const groups = (query, yourId, UniqueIds, page, ITEMS_PER_PAGE) => {
                   $cond: {
                     if: { $eq: [yourId, "$moderator"] },
                     then: groupRoles.MODERATOR,
-                    else: groupRoles.NOT_Member,
+                    else: groupRoles.NOT_MEMBER,
                   },
                 },
               },
@@ -1285,7 +1310,6 @@ export const groups = (query, yourId, UniqueIds, page, ITEMS_PER_PAGE) => {
               },
             ],
           },
-
           {
             $and: [
               {
@@ -1293,7 +1317,6 @@ export const groups = (query, yourId, UniqueIds, page, ITEMS_PER_PAGE) => {
                   $nin: [new mongoose.Types.ObjectId(yourId)],
                 },
               },
-
               {
                 visibility: visibility.HIDDEN,
               },
@@ -1303,9 +1326,7 @@ export const groups = (query, yourId, UniqueIds, page, ITEMS_PER_PAGE) => {
                     _id: { $in: UniqueIds },
                   },
                   {
-                    "joiningRequests.userId": new mongoose.Types.ObjectId(
-                      yourId
-                    ),
+                    "joiningRequests.userId": new mongoose.Types.ObjectId(yourId),
                   },
                 ],
               },
@@ -1320,37 +1341,55 @@ export const groups = (query, yourId, UniqueIds, page, ITEMS_PER_PAGE) => {
       },
     },
     {
-      $project: {
-        _id: 1,
-        name: 1,
-        description: 1,
-        cover: 1,
-        YourRole: {
-          $cond: {
-            if: { $in: [yourId, "$members.userId"] },
-            then: groupRoles.MEMBER,
-            else: {
-              $cond: {
-                if: { $in: [yourId, "$admins.userId"] },
-                then: groupRoles.ADMIN,
-                else: {
-                  $cond: {
-                    if: { $eq: [yourId, "$moderator"] },
-                    then: groupRoles.MODERATOR,
-                    else: groupRoles.NOT_Member,
+      $facet: {
+        totalCount: [
+          { $count: "count" }
+        ],
+        groups: [
+          {
+            $project: {
+              _id: 1,
+              name: 1,
+              description: 1,
+              cover: 1,
+              YourRole: {
+                $cond: {
+                  if: { $in: [yourId, "$members.userId"] },
+                  then: groupRoles.MEMBER,
+                  else: {
+                    $cond: {
+                      if: { $in: [yourId, "$admins.userId"] },
+                      then: groupRoles.ADMIN,
+                      else: {
+                        $cond: {
+                          if: { $eq: [yourId, "$moderator"] },
+                          then: groupRoles.MODERATOR,
+                          else: groupRoles.NOT_MEMBER,
+                        },
+                      },
+                    },
                   },
                 },
               },
             },
           },
-        },
+          {
+            $skip: (page - 1) * ITEMS_PER_PAGE,
+          },
+          {
+            $limit: ITEMS_PER_PAGE,
+          },
+        ],
       },
     },
     {
-      $skip: (page - 1) * ITEMS_PER_PAGE,
-    },
-    {
-      $limit: ITEMS_PER_PAGE,
+      $project: {
+        groups: 1,
+        totalCount: {
+          $arrayElemAt: ["$totalCount.count", 0],
+        },
+      },
     },
   ];
 };
+

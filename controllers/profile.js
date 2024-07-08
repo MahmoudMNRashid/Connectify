@@ -2004,8 +2004,11 @@ export const searchAboutPepole = async (req, res, next) => {
     const aggregationResult = await User.aggregate(
       pepole(query, yourId, page, ITEMS_PER_PAGE)
     );
-
-    res.json(aggregationResult);
+    const totalUsers = aggregationResult[0].totalCount;
+    res.json({
+      users: aggregationResult[0].people,
+      extraInfo: information(totalUsers, page, ITEMS_PER_PAGE),
+    });
   } catch (error) {
     next(error);
   }
@@ -2021,8 +2024,11 @@ export const searchAboutPages = async (req, res, next) => {
     const aggregationResult = await Page.aggregate(
       pages(query, yourId, page, ITEMS_PER_PAGE)
     );
-
-    res.status(200).json({ aggregationResult });
+    const totalPages = aggregationResult[0].totalCount;
+    res.json({
+      pages: aggregationResult[0].pages,
+      extraInfo: information(totalPages, page, ITEMS_PER_PAGE),
+    });
   } catch (error) {
     next(error);
   }
@@ -2048,7 +2054,11 @@ export const searchAboutGroups = async (req, res, next) => {
       groups(query, yourId, UniqueIds, page, ITEMS_PER_PAGE)
     );
 
-    res.status(200).json({ aggregationResult });
+    const totalGroups = aggregationResult[0].totalCount;
+    res.json({
+      groups: aggregationResult[0].groups,
+      extraInfo: information(totalGroups, page, ITEMS_PER_PAGE),
+    });
   } catch (error) {
     next(error);
   }
