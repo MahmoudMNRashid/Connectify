@@ -47,7 +47,7 @@ export const signup = async (req, res, next) => {
       lastName: req.body.lastName,
       email: req.body.email,
       password: hashedPassword,
-      gender: req.body.gender==='male'?'Male':'Female',
+      gender: req.body.gender === "male" ? "Male" : "Female",
       birthDay: req.body.birthDay,
       role: role[0],
       confirmationToken: confirmationToken,
@@ -159,12 +159,14 @@ export const signin = async (req, res, next) => {
       process.env.PRIVATE_KEY,
       { expiresIn: "30d" }
     );
-
+    const expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + 30);
+    const formattedExpirationDate = expirationDate.toISOString();
     res.status(200).json({
       token,
       userId: user._id.toString(),
       role: user.role,
-      experation: 24 * 60 * 60 * 1000 * 30,
+      experation: formattedExpirationDate,
       firstName: user.firstName,
       lastName: user.lastName,
       logo: user.profilePhotos[user.profilePhotos.length - 1],
@@ -336,7 +338,7 @@ export const newPassword = async (req, res, next) => {
 };
 
 export const checkResetPassword = async (req, res, next) => {
-  console.log('first')
+  console.log("first");
   const errors = validationResult(req);
   const token = req.body.token;
   const userId = req.body.userId;
