@@ -623,7 +623,7 @@ export const likesForProfilePost = (
             $addFields: {
               areYou: {
                 $cond: {
-                  if: { $eq: ["$user.userId", yourId] },
+                  if: { $eq: ["$userId",new mongoose.Types.ObjectId(yourId)] },
                   then: true,
                   else: false,
                 },
@@ -755,7 +755,7 @@ export const likesForPagePost = (
             $addFields: {
               areYou: {
                 $cond: {
-                  if: { $eq: ["$user.userId", yourId] },
+                  if: { $eq: ["$userId", new mongoose.Types.ObjectId(yourId)] },
                   then: true,
                   else: false,
                 },
@@ -897,7 +897,7 @@ export const likesForGroupPost = (
             $addFields: {
               areYou: {
                 $cond: {
-                  if: { $eq: ["$user.userId", yourId] },
+                  if: { $eq: ["$userId", new mongoose.Types.ObjectId(yourId)] },
                   then: true,
                   else: false,
                 },
