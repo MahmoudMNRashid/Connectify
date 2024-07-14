@@ -1547,9 +1547,10 @@ export const getMainInformations = async (req, res, next) => {
   const isHeinvited = req.isHeinvited;
   const isHeSendRequest = req.isHeSendRequest;
   const privacy = req.privacy;
-
+console.log(role)
   try {
     if (role === groupRoles.NOT_Member) {
+    
       const group = await Group.aggregate(
         mainInformationForNotMembers(
           groupId,

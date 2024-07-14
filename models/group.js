@@ -57,6 +57,7 @@ const groupSchema = new Schema(
         postId: { type: Schema.Types.ObjectId, ref: "Post" },
         ownerId: { type: Schema.Types.ObjectId, ref: "User" },
       },
+      
     ],
 
     joiningRequests: [

@@ -1545,7 +1545,8 @@ export const deleteRate = async (req, res, next) => {
 export const getMainInformations = async (req, res, next) => {
   const pageId = req.params.pageId;
   const role = req.role;
-
+  const yourId = req.userId;
+  console.log(role);
   try {
     const page = await Page.aggregate([
       {
@@ -1554,7 +1555,13 @@ export const getMainInformations = async (req, res, next) => {
       {
         $addFields: {
           role: role,
-          isHeFollowers: role === pageRoles.FOLLOWERS ? true : false,
+          isHeFollowers: {
+            $cond: {
+              if: { $in: [new mongoose.Types.ObjectId(yourId), "$usersLiked"] },
+              then: true,
+              else: false,
+            },
+          },
           isHeOwner: role === pageRoles.MODERATOR ? true : false,
         },
       },

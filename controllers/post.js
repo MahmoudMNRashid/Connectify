@@ -127,7 +127,7 @@ export const createPost = async (req, res, next) => {
       post.userRole = userRole;
       post.group = group._id;
       var result2 = await post.save({ session });
-      if (group.immediatePost === false && userRole !== rolesGroup.ADMIN) {
+      if (group.immediatePost === false && userRole !== groupRoles.ADMIN) {
         await Group.updateOne(
           { _id: groupId },
           {
@@ -720,13 +720,16 @@ export const createComment = async (req, res, next) => {
       },
       {
         new: true,
-        select: "_id",
+        select: "_id comments",
       }
     );
     !post ? createError(404, "did not find the post") : null;
     done = 1;
 
-    res.status(200).json({ message: "Your comment has been created", comment });
+    const newComment = post.comments[post.comments.length - 1];
+    res
+      .status(200)
+      .json({ message: "Your comment has been created", comment: newComment });
   } catch (error) {
     //if something happen delete assets you uploaded
     if (publicidAndLink && done === 0) {

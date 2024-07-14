@@ -517,14 +517,28 @@ export const posts = (
                           { $in: ["$post.userRole", [groupRoles.MEMBER]] },
                           { $eq: [role, groupRoles.ADMIN] },
                           { $ne: ["$owner.userId", yourId] },
-                          { $not: { $in: ["$owner.userId", { $ifNull: ["$group.membersBlocked", []] }] } },
+                          {
+                            $not: {
+                              $in: [
+                                "$owner.userId",
+                                { $ifNull: ["$group.membersBlocked", []] },
+                              ],
+                            },
+                          },
                         ],
                       },
                       {
                         $and: [
                           { $eq: [role, groupRoles.MODERATOR] },
                           { $ne: ["$owner.userId", yourId] },
-                          { $not: { $in: ["$owner.userId", { $ifNull: ["$group.membersBlocked", []] }] } },
+                          {
+                            $not: {
+                              $in: [
+                                "$owner.userId",
+                                { $ifNull: ["$group.membersBlocked", []] },
+                              ],
+                            },
+                          },
                         ],
                       },
                     ],
