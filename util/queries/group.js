@@ -79,15 +79,30 @@ export const mainInformationForMembers = (
             0,
           ],
         },
-        CanApproveMemberRequest:
-          "$whoCanApproveMemberRequest" ===
-          WhoCanPostorApproveMemberRequest.ANY_ONE_IN_GROUP
-            ? true
-            : false,
-        canPost:
-          "$whoCanPost" === WhoCanPostorApproveMemberRequest.ANY_ONE_IN_GROUP
-            ? true
-            : false,
+        CanApproveMemberRequest: {
+          $cond: {
+            if: {
+              $eq: [
+                "$whoCanApproveMemberRequest",
+                WhoCanPostorApproveMemberRequest.ANY_ONE_IN_GROUP,
+              ],
+            },
+            then: true,
+            else: false,
+          },
+        },
+        canPost: {
+          $cond: {
+            if: {
+              $eq: [
+                "$whoCanPost",
+                WhoCanPostorApproveMemberRequest.ANY_ONE_IN_GROUP,
+              ],
+            },
+            then: true,
+            else: false,
+          },
+        },
       },
     },
     {
@@ -104,6 +119,7 @@ export const mainInformationForMembers = (
         canSearch: 1,
         isHeHasRequestsPost: 1,
         CanApproveMemberRequest: 1,
+        canPost: 1,
       },
     },
   ];

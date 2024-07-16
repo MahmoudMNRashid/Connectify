@@ -173,8 +173,18 @@ router.post(
 router.post("/addAdmin", isAuth, isModerator, addAdminController);
 
 router.post("/inviteUser", isAuth, isMember, inviteUserController);
-router.post("/AcceptRequestJoin", isAuth, isAdmin, AcceptRequestJoinController);
-router.post("/rejectRequestJoin", isAuth, isAdmin, rejectRequestJoinController);
+router.post(
+  "/AcceptRequestJoin",
+  isAuth,
+  isMember,
+  AcceptRequestJoinController
+);
+router.post(
+  "/rejectRequestJoin",
+  isAuth,
+  isMember,
+  rejectRequestJoinController
+);
 router.post("/acceptRequestPost", isAuth, isAdmin, acceptRequestPostController);
 router.post("/rejectRequestPost", isAuth, isAdmin, rejectRequestPostController);
 router.post("/reportPost", isAuth, isMember, reportPostController);

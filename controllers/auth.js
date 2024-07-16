@@ -15,8 +15,13 @@ dotenv.config();
 const config = {
   service: process.env.CONFIG_EMAIL_SERVICE_SERVICE, // your email domain
   auth: {
+    type: "OAuth2",
     user: process.env.CONFIG_EMAIL_SERVICE_USER, // your email address
     pass: process.env.CONFIG_EMAIL_SERVICE_PASS, // your password
+    clientId: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    refreshToken: process.env.REFRESH_TOKEN,
+
   },
 };
 const transporter = nodemailer.createTransport(config);

@@ -11,7 +11,11 @@ const groupSchema = new Schema(
     name: { type: String, required: true },
     description: String,
     cover: Object,
-    privacy: { type: String, required: true, enum: [privacy.PUBLIC,privacy.PRIVATE] },
+    privacy: {
+      type: String,
+      required: true,
+      enum: [privacy.PUBLIC, privacy.PRIVATE],
+    },
     visibility: {
       type: String,
       required: true,
@@ -57,7 +61,6 @@ const groupSchema = new Schema(
         postId: { type: Schema.Types.ObjectId, ref: "Post" },
         ownerId: { type: Schema.Types.ObjectId, ref: "User" },
       },
-      
     ],
 
     joiningRequests: [
@@ -75,6 +78,7 @@ const groupSchema = new Schema(
         postId: { type: Schema.Types.ObjectId, ref: "Post" },
         idOfOwnerPost: { type: Schema.Types.ObjectId, ref: "User" }, //for later when get
         reportDate: Date,
+        _id: { type: Schema.Types.ObjectId, required: true },
       },
     ],
     reportsFromAdmin: [
@@ -85,6 +89,7 @@ const groupSchema = new Schema(
         postId: { type: Schema.Types.ObjectId, ref: "Post" },
         idOfOwnerPost: { type: Schema.Types.ObjectId, ref: "User" },
         reportDate: Date,
+        _id: { type: Schema.Types.ObjectId, required: true },
       },
     ],
     membersBlocked: [{ type: Schema.Types.ObjectId, ref: "User" }],

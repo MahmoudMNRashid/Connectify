@@ -437,7 +437,8 @@ export const changeWhoCanApproveMemberRequest = async (req, res, next) => {
 export const addAdmin = async (req, res, next) => {
   const groupId = req.body.groupId;
   const memberId = req.body.memberId;
-
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     //no need to check if member found in users collection
     //because when delete user permnantly will leave all group
@@ -472,12 +473,22 @@ export const addAdmin = async (req, res, next) => {
       $pull: { members: member },
       $push: { admins: member },
     });
-
+    await Post.updateMany(
+      { userId: memberId, group: groupId },
+      { $set: { userRole: "admin" } },
+      {
+        session,
+      }
+    );
+    await session.commitTransaction();
+    session.endSession();
     res.status(200).json({
       message: `This member has been made an admin.`,
       member,
     });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     next(error);
   }
 };
@@ -680,6 +691,7 @@ export const reportPost = async (req, res, next) => {
       description: description,
       idOfOwnerPost: post.userId,
       reportDate: new Date(),
+      _id: new mongoose.Types.ObjectId(),
     };
 
     if (userRole === groupRoles.MEMBER) {
@@ -726,7 +738,7 @@ export const reportPost = async (req, res, next) => {
         [
           {
             $set: {
-              reports: {
+              reportsFromAdmin: {
                 $concatArrays: [
                   {
                     $filter: {
@@ -1251,7 +1263,8 @@ export const leaveGroup = async (req, res, next) => {
 export const fromAdminToMember = async (req, res, next) => {
   const groupId = req.body.groupId;
   const adminId = req.body.adminId;
-
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const group = await Group.findOne(
       {
@@ -1278,11 +1291,24 @@ export const fromAdminToMember = async (req, res, next) => {
       {
         $pull: { admins: { userId: adminId } },
         $push: { members: group.admins[0] },
+      },
+      {
+        session,
       }
     );
-
+    await Post.updateMany(
+      { userId: adminId, group: groupId },
+      { $set: { userRole: "member" } },
+      {
+        session,
+      }
+    );
+    await session.commitTransaction();
+    session.endSession();
     res.status(200).json({ message: `The admin become member` });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     next(error);
   }
 };
@@ -1547,10 +1573,9 @@ export const getMainInformations = async (req, res, next) => {
   const isHeinvited = req.isHeinvited;
   const isHeSendRequest = req.isHeSendRequest;
   const privacy = req.privacy;
-console.log(role)
+  console.log(role);
   try {
     if (role === groupRoles.NOT_Member) {
-    
       const group = await Group.aggregate(
         mainInformationForNotMembers(
           groupId,

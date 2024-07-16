@@ -1434,7 +1434,7 @@ export const deleteAccount = async (req, res, next) => {
       },
     ]);
     let done = 0;
-
+    console.log(aggregationResult);
     //check if you not moderator if passed the check update the groups
     if (aggregationResult[0].groupsJoined.length > 0) {
       const group = await Group.find(
@@ -1470,7 +1470,7 @@ export const deleteAccount = async (req, res, next) => {
     }
 
     //check from users you want edit them and edit
-    if (aggregationResult[0].usersWillEdit.length > 0) {
+    if (aggregationResult[0].usersWillEdit?.length > 0) {
       await User.updateMany(
         {
           _id: { $in: aggregationResult[0].usersWillEdit },

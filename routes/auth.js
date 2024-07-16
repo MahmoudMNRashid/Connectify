@@ -33,15 +33,9 @@ router.put(
       .isAlpha()
       .isLength({ min: 3 }),
     body("email", "Email is invalid").isEmail().normalizeEmail(),
-    body(
-      "password",
-      "Password must be at least 6 characters long,Password must contain at least one letter, one number, and one special character: @$!%*?&"
-    )
+    body("password", "Password must be at least 6 characters long")
       .trim()
-      .isLength({ min: 6 })
-      .matches(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/
-      ),
+      .isLength({ min: 6 }),
     body("birthDay", "Invalid date format for birthday")
       .notEmpty()
       .isDate()
@@ -84,11 +78,11 @@ router.post(
     body("email", "Email is invalid").isEmail().normalizeEmail(),
     body(
       "password",
-      "Password must be at least 6 characters long,Password must contain at least one letter, one number, and one special character: @$!%*?&"
+      "Password must be at least 6 characters long"
     )
       .trim()
       .isLength({ min: 6 })
-      .matches(/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/),
+      ,
   ],
   signinController
 );
@@ -106,13 +100,11 @@ router.put(
   [
     body(
       "newPassword",
-      "Password must be at least 6 characters long,Password must contain at least one letter, one number, and one special character: @$!%*?&"
+      "Password must be at least 6 characters long"
     )
       .trim()
       .isLength({ min: 6 })
-      .matches(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/
-      ),
+      ,
     body("userId").isMongoId().withMessage("Wrong Id"),
     body("token").notEmpty().withMessage("Token should not be empty"),
   ],
