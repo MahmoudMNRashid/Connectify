@@ -183,7 +183,7 @@ router.post(
   "/rejectRequestJoin",
   isAuth,
   isMember,
-  rejectRequestJoinController
+  rejectRequestJoinController //this
 );
 router.post("/acceptRequestPost", isAuth, isAdmin, acceptRequestPostController);
 router.post("/rejectRequestPost", isAuth, isAdmin, rejectRequestPostController);
