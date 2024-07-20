@@ -53,6 +53,10 @@ const postSchema = new Schema(
       type: String,
       enum: [groupRoles.MEMBER, groupRoles.ADMIN, groupRoles.MODERATOR],
     },
+
+    immediate: {
+      type: Boolean,
+    },
   },
 
   { timestamps: true }

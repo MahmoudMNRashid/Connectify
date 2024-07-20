@@ -1,6 +1,6 @@
 import { visibility } from "../configGroup.js";
 import { whoCanComment_Page } from "../configPage.js";
-import { whoCanSee_Profile } from "../configProfile.js";
+import { whoCanComment_Profile, whoCanSee_Profile } from "../configProfile.js";
 import { groupRoles, profileRoles } from "../roles.js";
 import mongoose from "mongoose";
 export const posts = (profileId, role, yourId, ITEMS_PER_PAGE, page) => {
@@ -87,7 +87,7 @@ export const posts = (profileId, role, yourId, ITEMS_PER_PAGE, page) => {
                     $and: [
                       {
                         $eq: [
-                          whoCanComment_Page.FOLLOWERS,
+                          whoCanComment_Profile.FRIENDS,
                           "$posts.whoCanComment",
                         ],
                       },
@@ -101,7 +101,7 @@ export const posts = (profileId, role, yourId, ITEMS_PER_PAGE, page) => {
             },
           },
           {
-            $sort: { "updatedAt": -1 },
+            $sort: { updatedAt: -1 },
           },
 
           {
@@ -304,7 +304,7 @@ export const friendsRequestSentToMe = (profileId, page, ITEMS_PER_PAGE) => {
               lastName: "$user.lastName",
               logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               sendingDate: "$friendsRequestRecieve.dateSending",
-            },
+              },
           },
         ],
       },
@@ -831,7 +831,7 @@ export const postFromAll = (
     {
       $match: {
         $or: [
-          { group: { $in: groupIds } },
+          { $and: [{ group: { $in: groupIds }, immediate: { $eq: true } }] },
           { page: { $in: [...likedPages, ...ownedPage] } },
           {
             profile: { $in: [...friends, new mongoose.Types.ObjectId(yourId)] },
@@ -1121,12 +1121,12 @@ export const postFromAll = (
 
 export const pepole = (query, yourId, page, ITEMS_PER_PAGE) => {
   return [
-    { 
-      $match: { 
-        $text: { $search: query.toString() } 
-      } 
+    {
+      $match: {
+        $text: { $search: query.toString() },
+      },
     },
-    { 
+    {
       $project: {
         _id: "$_id",
         firstName: "$firstName",
@@ -1135,23 +1135,21 @@ export const pepole = (query, yourId, page, ITEMS_PER_PAGE) => {
         profilesYouBlocked: "$profilesYouBlocked",
         friends: "$friends",
         logo: { $arrayElemAt: ["$profilePhotos", -1] },
-      } 
+      },
     },
-    { 
+    {
       $match: {
         $and: [
           { profilesYouBlocked: { $nin: [yourId] } },
           { blockedProfiles: { $nin: [yourId] } },
         ],
-      } 
+      },
     },
-    { 
+    {
       $facet: {
-        totalCount: [
-          { $count: "count" }
-        ],
+        totalCount: [{ $count: "count" }],
         people: [
-          { 
+          {
             $project: {
               _id: 1,
               firstName: 1,
@@ -1164,25 +1162,25 @@ export const pepole = (query, yourId, page, ITEMS_PER_PAGE) => {
                   else: false,
                 },
               },
-            } 
+            },
           },
-          { 
-            $skip: (page - 1) * ITEMS_PER_PAGE 
+          {
+            $skip: (page - 1) * ITEMS_PER_PAGE,
           },
-          { 
-            $limit: ITEMS_PER_PAGE 
-          }
-        ]
-      } 
+          {
+            $limit: ITEMS_PER_PAGE,
+          },
+        ],
+      },
     },
-    { 
+    {
       $project: {
         people: 1,
-        totalCount: { 
-          $arrayElemAt: ["$totalCount.count", 0] 
-        }
-      } 
-    }
+        totalCount: {
+          $arrayElemAt: ["$totalCount.count", 0],
+        },
+      },
+    },
   ];
 };
 export const pages = (query, yourId, page, ITEMS_PER_PAGE) => {
@@ -1210,9 +1208,7 @@ export const pages = (query, yourId, page, ITEMS_PER_PAGE) => {
     },
     {
       $facet: {
-        totalCount: [
-          { $count: "count" }
-        ],
+        totalCount: [{ $count: "count" }],
         pages: [
           {
             $project: {
@@ -1326,7 +1322,9 @@ export const groups = (query, yourId, UniqueIds, page, ITEMS_PER_PAGE) => {
                     _id: { $in: UniqueIds },
                   },
                   {
-                    "joiningRequests.userId": new mongoose.Types.ObjectId(yourId),
+                    "joiningRequests.userId": new mongoose.Types.ObjectId(
+                      yourId
+                    ),
                   },
                 ],
               },
@@ -1342,9 +1340,7 @@ export const groups = (query, yourId, UniqueIds, page, ITEMS_PER_PAGE) => {
     },
     {
       $facet: {
-        totalCount: [
-          { $count: "count" }
-        ],
+        totalCount: [{ $count: "count" }],
         groups: [
           {
             $project: {
@@ -1392,4 +1388,3 @@ export const groups = (query, yourId, UniqueIds, page, ITEMS_PER_PAGE) => {
     },
   ];
 };
-

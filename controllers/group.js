@@ -600,6 +600,15 @@ export const acceptRequestPost = async (req, res, next) => {
 
     !group ? createError("404", "There are no post with this ID") : null;
 
+    await Post.updateOne(
+      { _id: new mongoose.Types.ObjectId(_idPost) },
+      {
+        $set: {
+          immediate: true,
+        },
+      }
+    );
+
     res.status(200).json({ message: "Post has been accepted" });
   } catch (error) {
     next(error);

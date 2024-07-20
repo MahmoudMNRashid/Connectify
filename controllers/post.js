@@ -126,6 +126,9 @@ export const createPost = async (req, res, next) => {
     } else {
       post.userRole = userRole;
       post.group = group._id;
+      group.immediatePost === false && userRole !== groupRoles.ADMIN
+        ? (post.immediate = false)
+        : (post.immediate = true);
       var result2 = await post.save({ session });
       if (group.immediatePost === false && userRole !== groupRoles.ADMIN) {
         await Group.updateOne(
