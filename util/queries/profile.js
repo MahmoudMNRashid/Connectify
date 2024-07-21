@@ -304,7 +304,7 @@ export const friendsRequestSentToMe = (profileId, page, ITEMS_PER_PAGE) => {
               lastName: "$user.lastName",
               logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
               sendingDate: "$friendsRequestRecieve.dateSending",
-              },
+            },
           },
         ],
       },
@@ -1383,6 +1383,68 @@ export const groups = (query, yourId, UniqueIds, page, ITEMS_PER_PAGE) => {
         groups: 1,
         totalCount: {
           $arrayElemAt: ["$totalCount.count", 0],
+        },
+      },
+    },
+  ];
+};
+
+export const blockedUsers = (profileId, page, ITEMS_PER_PAGE) => {
+  return [
+    { $match: { _id: new mongoose.Types.ObjectId(profileId) } },
+    {
+      $facet: {
+        totalCount: [
+          {
+            $project: {
+              blockedUsersCount: { $size: "$profilesYouBlocked" },
+            },
+          },
+        ],
+        blockedUsers: [
+          {
+            $project: {
+              _id: 0,
+              profilesYouBlocked: 1,
+            },
+          },
+          { $unwind: "$profilesYouBlocked" },
+          {
+            $lookup: {
+              from: "users", // Assuming your user collection is named 'users'
+              localField: "profilesYouBlocked",
+              foreignField: "_id",
+              as: "user",
+            },
+          },
+         
+          {
+            $skip: (page - 1) * ITEMS_PER_PAGE,
+          },
+          {
+            $limit: ITEMS_PER_PAGE,
+          },
+          {
+            $unwind: "$user",
+          },
+
+          {
+            $project: {
+              userId: "$user._id",
+              firstName: "$user.firstName",
+              lastName: "$user.lastName",
+              logo: { $arrayElemAt: ["$user.profilePhotos", -1] },
+              sendingDate: "$friendsRequestRecieve.dateSending",
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        blockedUsers: 1,
+        totalCount: {
+          $arrayElemAt: ["$totalCount.blockedUsersCount", 0],
         },
       },
     },

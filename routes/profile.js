@@ -50,7 +50,8 @@ import {
   searchAboutPepole as searchAboutPepoleController,
   searchAboutPages as searchAboutPagesController,
   searchAboutGroups as searchAboutGroupsController,
-  deleteAccount as deleteAccountController
+  deleteAccount as deleteAccountController,
+  getblockedUsers as getblockedUsersController,
 } from "../controllers/profile.js";
 import { canSeeWithRole } from "../middleware/for-Profile.js";
 
@@ -357,6 +358,15 @@ router.get(
 );
 
 router.get("/homePosts", isAuth, getPostsFromAllController);
+
+//Get friends request sent by me
+router.get(
+  "/blockedUsers/:profileId",
+  isAuth,
+  canSeeWithRole,
+  getblockedUsersController
+);
+
 router.get("/searchProfiles", isAuth, searchAboutPepoleController);
 router.get("/searchPages", isAuth, searchAboutPagesController);
 router.get("/searchGroups", isAuth, searchAboutGroupsController);

@@ -14,6 +14,7 @@ import {
 import { createError } from "../util/helpers.js";
 import {
   GroupsJoined,
+  blockedUsers,
   friends,
   friendsRequestSentByMe,
   friendsRequestSentToMe,
@@ -1985,6 +1986,29 @@ export const getPostsFromAll = async (req, res, next) => {
     return res.json({
       homePosts: aggregationResult[0].posts,
       extraInfo: information(totalPosts, page, ITEMS_PER_PAGE),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getblockedUsers = async (req, res, next) => {
+  const profileId = req.params.profileId;
+  const ITEMS_PER_PAGE = 20;
+  const page = +req.query.page || 1;
+  const role = req.role;
+  try {
+    role !== profileRoles.OWNER ? createError(403, "Forbidden") : null;
+
+    const aggregationResult = await User.aggregate(
+      blockedUsers(profileId, page, ITEMS_PER_PAGE)
+    );
+console.log(aggregationResult)
+    const totalBlockedUsers = aggregationResult[0].totalCount;
+
+    res.status(200).json({
+      blockedUsers: aggregationResult[0].blockedUsers,
+      extraInfo: information(totalBlockedUsers, page, ITEMS_PER_PAGE),
     });
   } catch (error) {
     next(error);
