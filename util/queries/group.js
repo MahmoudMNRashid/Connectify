@@ -518,6 +518,18 @@ export const posts = (
                       { $ne: ["$post.userRole", groupRoles.MODERATOR] },
                       { $ne: [role, groupRoles.NOT_Member] },
                       { $ne: ["$owner.userId", yourId] },
+                      {
+                        $or: [
+                          { $ne: [role, groupRoles.ADMIN] },
+                          {
+                            $and: [
+                              { $eq: [role, groupRoles.ADMIN] },
+                              { $ne: ["$post.userRole", groupRoles.MEMBER] },
+                              { $ne: ["$post.userRole", groupRoles.MODERATOR] },
+                            ],
+                          },
+                        ],
+                      },
                     ],
                   },
                   then: true,
