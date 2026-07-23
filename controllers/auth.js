@@ -12,19 +12,14 @@ import dotenv from "dotenv";
 import { createError } from "../util/helpers.js";
 dotenv.config();
 
-const config = {
-  service: process.env.CONFIG_EMAIL_SERVICE_SERVICE, // your email domain
+// Gmail App Password auth (OAuth2 refresh tokens expire / cause invalid_grant)
+const transporter = nodemailer.createTransport({
+  service: process.env.CONFIG_EMAIL_SERVICE_SERVICE || "gmail",
   auth: {
-    type: "OAuth2",
-    user: process.env.CONFIG_EMAIL_SERVICE_USER, // your email address
-    pass: process.env.CONFIG_EMAIL_SERVICE_PASS, // your password
-    clientId: process.env.CLIENT_ID,
-    clientSecret: process.env.CLIENT_SECRET,
-    refreshToken: process.env.REFRESH_TOKEN,
-
+    user: process.env.CONFIG_EMAIL_SERVICE_USER,
+    pass: process.env.CONFIG_EMAIL_SERVICE_PASS?.replace(/\s/g, ""),
   },
-};
-const transporter = nodemailer.createTransport(config);
+});
 
 export const signup = async (req, res, next) => {
   const errors = validationResult(req);
@@ -100,7 +95,6 @@ export const signup = async (req, res, next) => {
         </html>
       `,
     };
-
     await transporter.sendMail(mailOptions);
 
     const newUser = new User(userDetails);
@@ -289,7 +283,7 @@ export const resetPassword = async (req, res, next) => {
     user.resetPasswordTokenExpire = resetPasswordTokenExpire;
     await user.save();
     const mailOptions = {
-      from: "akai00917@gmail.com",
+      from: `"${process.env.CONFIG_EMAIL_FROM}" <${process.env.CONFIG_EMAIL_SERVICE_USER}>`,
       to: user.email,
       subject: "reset your password,link is valid for one hour",
       text: `Click the following link to reset your password: ${confirmationLink}`,
